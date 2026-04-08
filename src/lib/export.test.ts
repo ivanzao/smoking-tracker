@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { buildExport, EXPORT_VERSION } from './export';
+import { buildExport, EXPORT_VERSION, serializeExport } from './export';
 import { TrackerEvent } from '@/types';
 
 describe('buildExport', () => {
@@ -40,5 +40,29 @@ describe('buildExport', () => {
     const file = buildExport(events);
     expect(file.eventCount).toBe(1);
     expect(file.dateRange).toEqual({ from: '2026-04-08', to: '2026-04-08' });
+  });
+});
+
+describe('serializeExport', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-04-08T14:30:00Z'));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('returns pretty-printed JSON parseable into the same shape', () => {
+    const events: TrackerEvent[] = [
+      { id: '1', timestamp: '2026-04-08T12:00:00-03:00', type: 'tobacco' },
+    ];
+    const json = serializeExport(events);
+    expect(json).toContain('\n');
+    expect(json).toContain('  ');
+    const parsed = JSON.parse(json);
+    expect(parsed.version).toBe(1);
+    expect(parsed.eventCount).toBe(1);
+    expect(parsed.events).toEqual(events);
   });
 });
