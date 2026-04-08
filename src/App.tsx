@@ -113,7 +113,7 @@ const App = () => {
         <div className="max-w-6xl mx-auto px-4 py-6 sm:px-6 sm:py-8">
           <header className="text-center mb-8">
             <h1 className="text-4xl sm:text-5xl font-bold text-foreground mb-2">
-              Puff Tracker
+              Smoking Tracker
             </h1>
             <p className="text-muted-foreground">do but don't forget</p>
           </header>
