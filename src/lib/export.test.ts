@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { buildExport, EXPORT_VERSION, parseImport, serializeExport } from './export';
+import {
+  buildExport,
+  EXPORT_VERSION,
+  mergeEvents,
+  parseImport,
+  serializeExport,
+} from './export';
 import { TrackerEvent } from '@/types';
 
 describe('buildExport', () => {
@@ -177,5 +183,56 @@ describe('parseImport', () => {
       expect(result.eventCount).toBe(2);
       expect(result.exportedAt).toBe('2026-04-08T20:00:00-03:00');
     }
+  });
+});
+
+describe('mergeEvents', () => {
+  it('adds all incoming when current is empty', () => {
+    const incoming: TrackerEvent[] = [
+      { id: 'a', timestamp: '2026-04-08T10:00:00-03:00', type: 'tobacco' },
+      { id: 'b', timestamp: '2026-04-08T11:00:00-03:00', type: 'cannabis' },
+    ];
+    const result = mergeEvents([], incoming);
+    expect(result.added).toBe(2);
+    expect(result.skipped).toBe(0);
+    expect(result.merged.map((e) => e.id)).toEqual(['a', 'b']);
+  });
+
+  it('keeps current when incoming is empty', () => {
+    const current: TrackerEvent[] = [
+      { id: 'a', timestamp: '2026-04-08T10:00:00-03:00', type: 'tobacco' },
+    ];
+    const result = mergeEvents(current, []);
+    expect(result.added).toBe(0);
+    expect(result.skipped).toBe(0);
+    expect(result.merged).toEqual(current);
+  });
+
+  it('skips events whose id already exists, keeps current copy', () => {
+    const current: TrackerEvent[] = [
+      { id: 'a', timestamp: '2026-04-08T10:00:00-03:00', type: 'tobacco', location: 'casa' },
+    ];
+    const incoming: TrackerEvent[] = [
+      { id: 'a', timestamp: '2026-04-08T10:00:00-03:00', type: 'tobacco', location: 'rua' },
+      { id: 'b', timestamp: '2026-04-08T11:00:00-03:00', type: 'cannabis' },
+    ];
+    const result = mergeEvents(current, incoming);
+    expect(result.added).toBe(1);
+    expect(result.skipped).toBe(1);
+    expect(result.merged).toHaveLength(2);
+    const a = result.merged.find((e) => e.id === 'a')!;
+    expect(a.location).toBe('casa');
+  });
+
+  it('sorts merged result by timestamp ascending', () => {
+    const current: TrackerEvent[] = [
+      { id: 'c', timestamp: '2026-04-08T15:00:00-03:00', type: 'tobacco' },
+    ];
+    const incoming: TrackerEvent[] = [
+      { id: 'a', timestamp: '2026-04-08T08:00:00-03:00', type: 'tobacco' },
+      { id: 'b', timestamp: '2026-04-08T20:00:00-03:00', type: 'cannabis' },
+    ];
+    const result = mergeEvents(current, incoming);
+    expect(result.merged.map((e) => e.id)).toEqual(['a', 'c', 'b']);
   });
 });

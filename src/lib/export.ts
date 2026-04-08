@@ -83,6 +83,33 @@ export function parseImport(raw: string): ParseResult {
   };
 }
 
+export interface MergeResult {
+  merged: TrackerEvent[];
+  added: number;
+  skipped: number;
+}
+
+export function mergeEvents(
+  current: TrackerEvent[],
+  incoming: TrackerEvent[]
+): MergeResult {
+  const existingIds = new Set(current.map((e) => e.id));
+  const additions: TrackerEvent[] = [];
+  let skipped = 0;
+  for (const e of incoming) {
+    if (existingIds.has(e.id)) {
+      skipped++;
+    } else {
+      additions.push(e);
+      existingIds.add(e.id);
+    }
+  }
+  const merged = [...current, ...additions].sort((a, b) =>
+    a.timestamp < b.timestamp ? -1 : a.timestamp > b.timestamp ? 1 : 0
+  );
+  return { merged, added: additions.length, skipped };
+}
+
 export function buildExport(events: TrackerEvent[]): ExportFile {
   const from = events.length > 0 ? getDayKey(events[0].timestamp) : null;
   const to = events.length > 0 ? getDayKey(events[events.length - 1].timestamp) : null;
