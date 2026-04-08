@@ -2,7 +2,7 @@
 
 **Data:** 2026-04-08
 **Status:** Design aprovado, aguardando plano de implementação
-**Escopo:** Primeiro de 5 sub-projetos da evolução do Smoke Leaf Counter (Puff Tracker). Refatora o modelo de dados, extrai a lógica para um hook, limpa dependências e introduz a nova interação de criação de eventos com contexto.
+**Escopo:** Primeiro de 5 sub-projetos da evolução do `smoking-tracker`. Refatora o modelo de dados, extrai a lógica para um hook, limpa dependências, padroniza o nome do projeto e introduz a nova interação de criação de eventos com contexto.
 
 ## Contexto
 
@@ -24,6 +24,26 @@ O schema agregado é substituído por uma lista plana de eventos individuais. Ca
 - `leaf` → `cannabis`
 
 Motivo: nomes mais precisos e neutros pro domínio real do app.
+
+### Padronização do nome do projeto
+
+O projeto hoje usa **três nomes diferentes** em lugares diferentes, resíduo de renomeações parciais e scaffold inicial. A fundação padroniza tudo em **`smoking-tracker`** (o nome novo do repositório GitHub, e coincidentemente o único que já era usado corretamente na chave do localStorage).
+
+**Referências a atualizar:**
+
+| Arquivo | Valor atual | Valor novo |
+|---|---|---|
+| `package.json` → `name` | `vite_react_shadcn_ts` | `smoking-tracker` |
+| `README.md` → h1 e corpo | `Smoke Leaf Counter` | `Smoking Tracker` |
+| `index.html` → `<title>` | `Puff Tracker` | `Smoking Tracker` |
+| `index.html` → `og:title` | `Puff Tracker` | `Smoking Tracker` |
+| `src/App.tsx` → h1 (`<h1>`) | `Puff Tracker` | `Smoking Tracker` |
+| `src/App.tsx` → subtítulo | `do but don't forget` | *(manter ou remover — decisão do usuário)* |
+| `localStorage` key | `smoking-tracker` | `smoking-tracker` *(já correto, não mexer)* |
+
+Também deve ser feita uma varredura global por `smoke-leaf-counter`, `smoke_leaf_counter`, `SmokeLeafCounter`, `Smoke Leaf Counter`, `puff-tracker`, `Puff Tracker`, `vite_react_shadcn` e equivalentes para garantir que nenhuma referência passa batido (Dockerfile, meta tags, workflows do GitHub Actions em `.github/`, comentários, etc.).
+
+**Git remote:** o repositório antigo (`ivanzao/smoke-leaf-counter`) será substituído pelo novo `ivanzao/smoking-tracker`. A decisão de apagar o antigo fica a critério do usuário — não é parte do escopo técnico desta fundação.
 
 ### Sem retrocompatibilidade
 
@@ -330,6 +350,8 @@ Conteúdo:
 10. `src/components/ui/` contém apenas componentes em uso real
 11. Dialog de editar dia permite visualizar eventos do dia, remover um evento individual, e limpar o dia inteiro
 12. Nenhum uso de `date-fns-tz` ou fuso hardcoded no código restante
+13. Grep por `smoke-leaf-counter`, `Smoke Leaf Counter`, `Puff Tracker`, `puff-tracker`, `vite_react_shadcn` retorna **zero** resultados (exceto neste próprio spec e no histórico git)
+14. `package.json.name` é `smoking-tracker`; título da aba do browser é `Smoking Tracker`
 
 ## Fora de escopo (próximos sub-projetos)
 
