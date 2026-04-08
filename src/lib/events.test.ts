@@ -6,6 +6,8 @@ import {
   getEventsForDay,
   getDayTotals,
   getDaysInRange,
+  getEarliestEventMonth,
+  getMonthKey,
 } from './events';
 import { TrackerEvent } from '@/types';
 
@@ -109,5 +111,40 @@ describe('getDaysInRange', () => {
   it('returns a single entry when from === to', () => {
     const d = new Date(2026, 3, 8);
     expect(getDaysInRange(d, d)).toEqual(['2026-04-08']);
+  });
+});
+
+describe('getMonthKey', () => {
+  it('returns YYYY-MM for a date', () => {
+    expect(getMonthKey(new Date(2026, 3, 8))).toBe('2026-04');
+    expect(getMonthKey(new Date(2026, 0, 1))).toBe('2026-01');
+    expect(getMonthKey(new Date(2026, 11, 31))).toBe('2026-12');
+  });
+});
+
+describe('getEarliestEventMonth', () => {
+  it('returns null when events is empty', () => {
+    expect(getEarliestEventMonth([])).toBeNull();
+  });
+
+  it('returns startOfMonth of the only event', () => {
+    const events: TrackerEvent[] = [
+      { id: '1', timestamp: '2026-04-08T12:00:00-03:00', type: 'tobacco' },
+    ];
+    const result = getEarliestEventMonth(events);
+    expect(result).not.toBeNull();
+    expect(getMonthKey(result!)).toBe('2026-04');
+    expect(result!.getDate()).toBe(1);
+  });
+
+  it('returns startOfMonth of the earliest event when multiple months', () => {
+    const events: TrackerEvent[] = [
+      { id: '1', timestamp: '2026-04-08T12:00:00-03:00', type: 'tobacco' },
+      { id: '2', timestamp: '2026-02-15T10:00:00-03:00', type: 'cannabis' },
+      { id: '3', timestamp: '2026-03-20T08:00:00-03:00', type: 'tobacco' },
+    ];
+    const result = getEarliestEventMonth(events);
+    expect(getMonthKey(result!)).toBe('2026-02');
+    expect(result!.getDate()).toBe(1);
   });
 });
