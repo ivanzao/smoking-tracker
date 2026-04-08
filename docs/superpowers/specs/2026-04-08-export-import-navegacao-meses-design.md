@@ -167,19 +167,16 @@ export interface UseTrackerAPI {
 ## Helpers novos em `src/lib/events.ts`
 
 ```ts
-// Primeiro e último mês com eventos. null/null se events === [].
-// earliest é startOfMonth do evento mais antigo;
-// latest é startOfMonth do evento mais recente.
-export function getMonthRange(events: TrackerEvent[]): {
-  earliest: Date | null;
-  latest: Date | null;
-};
+// startOfMonth do evento mais antigo. null se events === [].
+// Usado para o limite esquerdo da navegação.
+export function getEarliestEventMonth(events: TrackerEvent[]): Date | null;
 
 // 'YYYY-MM' de uma Date, usando wall-clock local.
+// Usado para comparar se viewMonth é o mês atual.
 export function getMonthKey(date: Date): string;
 ```
 
-`getMonthKey` é usado para comparações de igualdade mês-a-mês no `CalendarView`; `getMonthRange` para calcular limites das setas.
+O limite direito da navegação é sempre o mês de hoje, por definição — não precisa de helper. Por isso só o `earliest` é exposto.
 
 ## Componentes
 
@@ -203,7 +200,7 @@ const [viewMonth, setViewMonth] = useState<Date>(() => startOfMonth(new Date()))
 
 **Lógica:**
 
-- `const { earliest } = useMemo(() => getMonthRange(events), [events]);`
+- `const earliest = useMemo(() => getEarliestEventMonth(events), [events]);`
 - `monthDays = getDaysInRange(startOfMonth(viewMonth), endOfMonth(viewMonth))`
 - `canGoBack = earliest !== null && viewMonth > earliest`
 - `canGoForward = getMonthKey(viewMonth) !== getMonthKey(new Date())`
@@ -293,9 +290,9 @@ interface SettingsDrawerProps {
 
 **`src/lib/events.test.ts` (adicionar):**
 
-- `getMonthRange([])` → `{ earliest: null, latest: null }`
-- `getMonthRange` com um evento → `earliest === latest === startOfMonth(event)`
-- `getMonthRange` com eventos em meses diferentes → extremos corretos
+- `getEarliestEventMonth([])` → `null`
+- `getEarliestEventMonth` com um evento → `startOfMonth` daquele evento
+- `getEarliestEventMonth` com eventos em meses diferentes → `startOfMonth` do mais antigo
 - `getMonthKey(new Date('2026-04-08'))` → `'2026-04'`
 
 **`src/hooks/useTracker.test.ts` (adicionar):**
@@ -305,7 +302,7 @@ interface SettingsDrawerProps {
 - `importEvents` com eventos novos sobre estado pré-existente → `added` correto, `events` combinado
 - `importEvents` com todos os eventos já presentes → `added: 0, skipped: N`, persistência dispara mas conteúdo não muda
 
-Navegação de mês (`CalendarView`) fica sem teste automatizado, seguindo o padrão do sub-projeto #1 ("componentes são validados no olho"). A lógica que sustenta os limites (`getMonthRange`, `getMonthKey`) é testada unitariamente.
+Navegação de mês (`CalendarView`) fica sem teste automatizado, seguindo o padrão do sub-projeto #1 ("componentes são validados no olho"). A lógica que sustenta os limites (`getEarliestEventMonth`, `getMonthKey`) é testada unitariamente.
 
 ## Dependências
 
