@@ -1,6 +1,6 @@
 import { subDays, format } from 'date-fns';
 import { TrackerEvent, GoalEntry } from '@/types';
-import { getEventsForDay, todayKey } from './events';
+import { getEventsForDay, getDayKey, todayKey } from './events';
 
 export type DayGoalStatus = 'within' | 'over' | 'no-goal';
 
@@ -35,6 +35,45 @@ export function getDayGoalStatus(
   if (!goal) return 'no-goal';
   const dayEvents = getEventsForDay(events, dayKey);
   return dayEvents.length <= goal.limit ? 'within' : 'over';
+}
+
+export function getRollingAverage(
+  events: TrackerEvent[],
+  days: number,
+  anchor?: string,
+): number {
+  const to = anchor ?? todayKey();
+  const from = format(subDays(new Date(to + 'T12:00:00'), days - 1), 'yyyy-MM-dd');
+  let count = 0;
+  for (const e of events) {
+    const dk = getDayKey(e.timestamp);
+    if (dk >= from && dk <= to) count++;
+  }
+  return count / days;
+}
+
+export function getAverageDelta(
+  events: TrackerEvent[],
+  days: number,
+  anchor?: string,
+): number | null {
+  const to = anchor ?? todayKey();
+  const currentAvg = getRollingAverage(events, days, to);
+  const prevTo = format(subDays(new Date(to + 'T12:00:00'), days), 'yyyy-MM-dd');
+  const prevAvg = getRollingAverage(events, days, prevTo);
+  if (prevAvg === 0) return null;
+  return (currentAvg - prevAvg) / prevAvg;
+}
+
+export function getMovingAverageSeries(
+  events: TrackerEvent[],
+  dayKeys: string[],
+  windowDays: number,
+): Array<{ dayKey: string; average: number }> {
+  return dayKeys.map((dk) => ({
+    dayKey: dk,
+    average: getRollingAverage(events, windowDays, dk),
+  }));
 }
 
 export function getCurrentStreak(

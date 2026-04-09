@@ -5,6 +5,9 @@ import {
   getCurrentGoal,
   getDayGoalStatus,
   getCurrentStreak,
+  getRollingAverage,
+  getAverageDelta,
+  getMovingAverageSeries,
 } from './stats';
 
 const mkEvent = (overrides: Partial<TrackerEvent>): TrackerEvent => ({
@@ -189,5 +192,90 @@ describe('getCurrentStreak', () => {
       mkEvent({ id: '8', timestamp: '2026-04-08T08:00:00-03:00' }),
     ];
     expect(getCurrentStreak(events, goals)).toBe(8);
+  });
+});
+
+describe('getRollingAverage', () => {
+  it('divides total events by number of days, not by days with events', () => {
+    const events = [
+      mkEvent({ id: '1', timestamp: '2026-04-05T10:00:00-03:00' }),
+      mkEvent({ id: '2', timestamp: '2026-04-05T12:00:00-03:00' }),
+      mkEvent({ id: '3', timestamp: '2026-04-08T10:00:00-03:00' }),
+    ];
+    const avg = getRollingAverage(events, 7, '2026-04-08');
+    expect(avg).toBeCloseTo(3 / 7, 4);
+  });
+
+  it('returns 0 when no events in range', () => {
+    expect(getRollingAverage([], 7, '2026-04-08')).toBe(0);
+  });
+
+  it('counts only events within the N-day window', () => {
+    const events = [
+      mkEvent({ id: '1', timestamp: '2026-04-01T10:00:00-03:00' }),
+      mkEvent({ id: '2', timestamp: '2026-04-05T10:00:00-03:00' }),
+    ];
+    const avg = getRollingAverage(events, 7, '2026-04-08');
+    expect(avg).toBeCloseTo(1 / 7, 4);
+  });
+
+  it('uses todayKey when anchor is omitted', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-04-08T14:00:00Z'));
+    const events = [
+      mkEvent({ id: '1', timestamp: '2026-04-08T10:00:00-03:00' }),
+    ];
+    expect(getRollingAverage(events, 7)).toBeCloseTo(1 / 7, 4);
+    vi.useRealTimers();
+  });
+});
+
+describe('getAverageDelta', () => {
+  it('returns negative fraction when current period < previous', () => {
+    const events: TrackerEvent[] = [];
+    for (let i = 0; i < 10; i++) {
+      events.push(mkEvent({ id: `prev-${i}`, timestamp: '2026-04-03T10:00:00-03:00' }));
+    }
+    for (let i = 0; i < 7; i++) {
+      events.push(mkEvent({ id: `cur-${i}`, timestamp: '2026-04-10T10:00:00-03:00' }));
+    }
+    const delta = getAverageDelta(events, 7, '2026-04-14');
+    expect(delta).toBeCloseTo(-0.3, 1);
+  });
+
+  it('returns positive fraction when current period > previous', () => {
+    const events: TrackerEvent[] = [];
+    for (let i = 0; i < 3; i++) {
+      events.push(mkEvent({ id: `prev-${i}`, timestamp: '2026-04-03T10:00:00-03:00' }));
+    }
+    for (let i = 0; i < 7; i++) {
+      events.push(mkEvent({ id: `cur-${i}`, timestamp: '2026-04-10T10:00:00-03:00' }));
+    }
+    const delta = getAverageDelta(events, 7, '2026-04-14');
+    expect(delta).toBeCloseTo(1.333, 1);
+  });
+
+  it('returns null when previous period has zero events', () => {
+    const events = [
+      mkEvent({ id: '1', timestamp: '2026-04-10T10:00:00-03:00' }),
+    ];
+    expect(getAverageDelta(events, 7, '2026-04-14')).toBeNull();
+  });
+});
+
+describe('getMovingAverageSeries', () => {
+  it('computes correct moving window averages for each dayKey', () => {
+    const events = [
+      mkEvent({ id: '1', timestamp: '2026-04-01T10:00:00-03:00' }),
+      mkEvent({ id: '2', timestamp: '2026-04-01T12:00:00-03:00' }),
+      mkEvent({ id: '3', timestamp: '2026-04-03T10:00:00-03:00' }),
+    ];
+    const dayKeys = ['2026-04-01', '2026-04-02', '2026-04-03'];
+    const result = getMovingAverageSeries(events, dayKeys, 3);
+
+    expect(result).toHaveLength(3);
+    expect(result[0]).toEqual({ dayKey: '2026-04-01', average: expect.closeTo(2 / 3, 4) });
+    expect(result[1]).toEqual({ dayKey: '2026-04-02', average: expect.closeTo(2 / 3, 4) });
+    expect(result[2]).toEqual({ dayKey: '2026-04-03', average: expect.closeTo(1, 4) });
   });
 });
