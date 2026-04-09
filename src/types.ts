@@ -13,3 +13,16 @@ export interface DayTotals {
   tobacco: number;
   cannabis: number;
 }
+
+export interface GoalEntry {
+  id: string;
+  /** Positive integer — max total events (tobacco + cannabis) per day */
+  limit: number;
+  /** Day key "YYYY-MM-DD" from which this goal takes effect (inclusive) */
+  effectiveFrom: string;
+}
+
+export interface StorageShape {
+  events: TrackerEvent[];
+  goals: GoalEntry[];
+}
