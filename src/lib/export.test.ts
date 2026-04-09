@@ -3,10 +3,11 @@ import {
   buildExport,
   EXPORT_VERSION,
   mergeEvents,
+  mergeGoals,
   parseImport,
   serializeExport,
 } from './export';
-import { TrackerEvent } from '@/types';
+import { TrackerEvent, GoalEntry } from '@/types';
 
 describe('buildExport', () => {
   beforeEach(() => {
@@ -67,7 +68,7 @@ describe('serializeExport', () => {
     expect(json).toContain('\n');
     expect(json).toContain('  ');
     const parsed = JSON.parse(json);
-    expect(parsed.version).toBe(1);
+    expect(parsed.version).toBe(2);
     expect(parsed.eventCount).toBe(1);
     expect(parsed.events).toEqual(events);
   });
@@ -94,7 +95,7 @@ describe('parseImport', () => {
 
   it('rejects unsupported version', () => {
     const file = {
-      version: 2,
+      version: 99,
       exportedAt: '2026-04-08T14:30:00-03:00',
       eventCount: 0,
       dateRange: { from: null, to: null },
@@ -180,9 +181,161 @@ describe('parseImport', () => {
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.events).toEqual(events);
+      expect(result.goals).toEqual([]);
       expect(result.eventCount).toBe(2);
       expect(result.exportedAt).toBe('2026-04-08T20:00:00-03:00');
     }
+  });
+});
+
+describe('parseImport — v1 backward compat', () => {
+  it('accepts v1 file without goals, returns goals as empty array', () => {
+    const file = {
+      version: 1,
+      exportedAt: '2026-04-08T20:00:00-03:00',
+      eventCount: 1,
+      dateRange: { from: '2026-04-08', to: '2026-04-08' },
+      events: [
+        { id: '1', timestamp: '2026-04-08T12:00:00-03:00', type: 'tobacco' },
+      ],
+    };
+    const result = parseImport(JSON.stringify(file));
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.goals).toEqual([]);
+      expect(result.events).toHaveLength(1);
+    }
+  });
+});
+
+describe('parseImport — v2 goals validation', () => {
+  const validV2Base = {
+    version: 2,
+    exportedAt: '2026-04-08T20:00:00-03:00',
+    eventCount: 0,
+    dateRange: { from: null, to: null },
+    events: [],
+  };
+
+  it('accepts v2 file with valid goals', () => {
+    const file = {
+      ...validV2Base,
+      goals: [{ id: 'g1', limit: 10, effectiveFrom: '2026-04-01' }],
+    };
+    const result = parseImport(JSON.stringify(file));
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.goals).toEqual(file.goals);
+    }
+  });
+
+  it('accepts v2 file with empty goals array', () => {
+    const file = { ...validV2Base, goals: [] };
+    const result = parseImport(JSON.stringify(file));
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.goals).toEqual([]);
+    }
+  });
+
+  it('rejects v2 file when goals is not an array', () => {
+    const file = { ...validV2Base, goals: 'oops' };
+    expect(parseImport(JSON.stringify(file))).toEqual({
+      ok: false,
+      error: 'invalid-goals',
+    });
+  });
+
+  it('rejects v2 file when goals is missing', () => {
+    expect(parseImport(JSON.stringify(validV2Base))).toEqual({
+      ok: false,
+      error: 'invalid-goals',
+    });
+  });
+
+  it('rejects v2 file with goal missing id', () => {
+    const file = {
+      ...validV2Base,
+      goals: [{ limit: 10, effectiveFrom: '2026-04-01' }],
+    };
+    expect(parseImport(JSON.stringify(file))).toEqual({
+      ok: false,
+      error: 'invalid-goals',
+    });
+  });
+
+  it('rejects v2 file with goal limit <= 0', () => {
+    const file = {
+      ...validV2Base,
+      goals: [{ id: 'g1', limit: 0, effectiveFrom: '2026-04-01' }],
+    };
+    expect(parseImport(JSON.stringify(file))).toEqual({
+      ok: false,
+      error: 'invalid-goals',
+    });
+  });
+
+  it('rejects v2 file with goal effectiveFrom malformed', () => {
+    const file = {
+      ...validV2Base,
+      goals: [{ id: 'g1', limit: 10, effectiveFrom: 'april-1' }],
+    };
+    expect(parseImport(JSON.stringify(file))).toEqual({
+      ok: false,
+      error: 'invalid-goals',
+    });
+  });
+});
+
+describe('mergeGoals', () => {
+  it('adds all incoming when current is empty', () => {
+    const incoming: GoalEntry[] = [
+      { id: 'g1', limit: 10, effectiveFrom: '2026-04-01' },
+    ];
+    const result = mergeGoals([], incoming);
+    expect(result.merged).toEqual(incoming);
+    expect(result.added).toBe(1);
+    expect(result.skipped).toBe(0);
+  });
+
+  it('skips goals with existing id', () => {
+    const current: GoalEntry[] = [
+      { id: 'g1', limit: 10, effectiveFrom: '2026-04-01' },
+    ];
+    const incoming: GoalEntry[] = [
+      { id: 'g1', limit: 8, effectiveFrom: '2026-04-01' },
+      { id: 'g2', limit: 6, effectiveFrom: '2026-04-10' },
+    ];
+    const result = mergeGoals(current, incoming);
+    expect(result.added).toBe(1);
+    expect(result.skipped).toBe(1);
+    expect(result.merged).toHaveLength(2);
+    expect(result.merged[0].limit).toBe(10);
+  });
+
+  it('sorts merged result by effectiveFrom ascending', () => {
+    const current: GoalEntry[] = [
+      { id: 'g2', limit: 8, effectiveFrom: '2026-04-10' },
+    ];
+    const incoming: GoalEntry[] = [
+      { id: 'g1', limit: 12, effectiveFrom: '2026-04-01' },
+    ];
+    const result = mergeGoals(current, incoming);
+    expect(result.merged.map((g) => g.id)).toEqual(['g1', 'g2']);
+  });
+});
+
+describe('buildExport — with goals', () => {
+  beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(new Date('2026-04-08T14:30:00Z')); });
+  afterEach(() => { vi.useRealTimers(); });
+
+  it('includes goals in export', () => {
+    const goals: GoalEntry[] = [
+      { id: 'g1', limit: 10, effectiveFrom: '2026-04-01' },
+    ];
+    const file = buildExport([], goals);
+    expect(file.version).toBe(2);
+    expect(file.goals).toEqual(goals);
   });
 });
 

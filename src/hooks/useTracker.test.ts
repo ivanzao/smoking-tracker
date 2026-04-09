@@ -163,7 +163,7 @@ describe('useTracker — export/import', () => {
 
     const json = result.current.exportEvents();
     const parsed = JSON.parse(json);
-    expect(parsed.version).toBe(1);
+    expect(parsed.version).toBe(2);
     expect(parsed.events).toEqual(seed);
   });
 
