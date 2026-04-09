@@ -349,3 +349,93 @@ describe('useTracker — setGoal', () => {
     expect(raw.goals[0].limit).toBe(10);
   });
 });
+
+describe('useTracker — reactive streak', () => {
+  beforeEach(() => { vi.useFakeTimers(); });
+  afterEach(() => { vi.useRealTimers(); });
+
+  it('streak goes to 0 when adding event over limit', () => {
+    vi.setSystemTime(new Date('2026-04-08T14:00:00Z'));
+    const goals: GoalEntry[] = [
+      { id: 'g1', limit: 1, effectiveFrom: '2026-04-01' },
+    ];
+    localStorage.setItem('smoking-tracker', JSON.stringify({ events: [], goals }));
+    const { result } = renderHook(() => useTracker());
+
+    act(() => { result.current.addEvent({ type: 'tobacco' }); });
+    expect(result.current.getCurrentStreak()).toBeGreaterThan(0);
+
+    act(() => { result.current.addEvent({ type: 'tobacco' }); });
+    expect(result.current.getCurrentStreak()).toBe(0);
+  });
+
+  it('streak restores when removing event back under limit', () => {
+    vi.setSystemTime(new Date('2026-04-08T14:00:00Z'));
+    const goals: GoalEntry[] = [
+      { id: 'g1', limit: 1, effectiveFrom: '2026-04-01' },
+    ];
+    localStorage.setItem('smoking-tracker', JSON.stringify({ events: [], goals }));
+    const { result } = renderHook(() => useTracker());
+
+    act(() => { result.current.addEvent({ type: 'tobacco' }); });
+    act(() => { result.current.addEvent({ type: 'tobacco' }); });
+    expect(result.current.getCurrentStreak()).toBe(0);
+
+    const secondId = result.current.events[1].id;
+    act(() => { result.current.removeEvent(secondId); });
+    expect(result.current.getCurrentStreak()).toBeGreaterThan(0);
+  });
+});
+
+describe('useTracker — import with goals', () => {
+  it('imports v2 file and merges goals', () => {
+    const goals: GoalEntry[] = [
+      { id: 'g1', limit: 10, effectiveFrom: '2026-04-01' },
+    ];
+    localStorage.setItem('smoking-tracker', JSON.stringify({ events: [], goals }));
+    const { result } = renderHook(() => useTracker());
+
+    const file = {
+      version: 2,
+      exportedAt: '2026-04-08T20:00:00-03:00',
+      eventCount: 1,
+      dateRange: { from: '2026-04-08', to: '2026-04-08' },
+      events: [{ id: 'e1', timestamp: '2026-04-08T12:00:00-03:00', type: 'tobacco' }],
+      goals: [
+        { id: 'g1', limit: 10, effectiveFrom: '2026-04-01' },
+        { id: 'g2', limit: 8, effectiveFrom: '2026-04-10' },
+      ],
+    };
+
+    let outcome: ReturnType<typeof result.current.importEvents>;
+    act(() => { outcome = result.current.importEvents(JSON.stringify(file)); });
+
+    expect(outcome!.ok).toBe(true);
+    if (outcome!.ok) {
+      expect(outcome!.added).toBe(1);
+      expect(outcome!.goalsAdded).toBe(1);
+      expect(outcome!.goalsSkipped).toBe(1);
+    }
+    expect(result.current.goals).toHaveLength(2);
+  });
+
+  it('imports v1 file — events merge, goals unchanged', () => {
+    const goals: GoalEntry[] = [
+      { id: 'g1', limit: 10, effectiveFrom: '2026-04-01' },
+    ];
+    localStorage.setItem('smoking-tracker', JSON.stringify({ events: [], goals }));
+    const { result } = renderHook(() => useTracker());
+
+    const file = {
+      version: 1,
+      exportedAt: '2026-04-08T20:00:00-03:00',
+      eventCount: 1,
+      dateRange: { from: '2026-04-08', to: '2026-04-08' },
+      events: [{ id: 'e1', timestamp: '2026-04-08T12:00:00-03:00', type: 'tobacco' }],
+    };
+
+    act(() => { result.current.importEvents(JSON.stringify(file)); });
+    expect(result.current.events).toHaveLength(1);
+    expect(result.current.goals).toEqual(goals);
+  });
+});
