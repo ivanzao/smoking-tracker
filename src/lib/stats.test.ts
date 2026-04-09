@@ -4,6 +4,7 @@ import {
   getGoalForDay,
   getCurrentGoal,
   getDayGoalStatus,
+  getCurrentStreak,
 } from './stats';
 
 const mkEvent = (overrides: Partial<TrackerEvent>): TrackerEvent => ({
@@ -98,5 +99,95 @@ describe('getDayGoalStatus', () => {
   it('returns within for a day with zero events', () => {
     const goals = [mkGoal({ effectiveFrom: '2026-04-01', limit: 5 })];
     expect(getDayGoalStatus([], goals, '2026-04-08')).toBe('within');
+  });
+});
+
+describe('getCurrentStreak', () => {
+  beforeEach(() => { vi.useFakeTimers(); });
+  afterEach(() => { vi.useRealTimers(); });
+
+  it('returns 0 when no goal is set', () => {
+    vi.setSystemTime(new Date('2026-04-08T14:00:00Z'));
+    expect(getCurrentStreak([], [])).toBe(0);
+  });
+
+  it('returns 0 when today is over the limit', () => {
+    vi.setSystemTime(new Date('2026-04-08T14:00:00Z'));
+    const goals = [mkGoal({ effectiveFrom: '2026-04-01', limit: 1 })];
+    const events = [
+      mkEvent({ id: '1', timestamp: '2026-04-08T08:00:00-03:00' }),
+      mkEvent({ id: '2', timestamp: '2026-04-08T10:00:00-03:00' }),
+    ];
+    expect(getCurrentStreak(events, goals)).toBe(0);
+  });
+
+  it('returns 1 when only today is within (yesterday has no goal)', () => {
+    vi.setSystemTime(new Date('2026-04-08T14:00:00Z'));
+    const goals = [mkGoal({ effectiveFrom: '2026-04-08', limit: 5 })];
+    const events = [
+      mkEvent({ id: '1', timestamp: '2026-04-08T08:00:00-03:00' }),
+    ];
+    expect(getCurrentStreak(events, goals)).toBe(1);
+  });
+
+  it('counts consecutive within days including today', () => {
+    vi.setSystemTime(new Date('2026-04-10T14:00:00Z'));
+    const goals = [mkGoal({ effectiveFrom: '2026-04-01', limit: 5 })];
+    const events = [
+      mkEvent({ id: '1', timestamp: '2026-04-08T08:00:00-03:00' }),
+      mkEvent({ id: '2', timestamp: '2026-04-09T08:00:00-03:00' }),
+      mkEvent({ id: '3', timestamp: '2026-04-09T10:00:00-03:00' }),
+      mkEvent({ id: '4', timestamp: '2026-04-10T08:00:00-03:00' }),
+    ];
+    expect(getCurrentStreak(events, goals)).toBe(10);
+  });
+
+  it('stops at the first over day going backward', () => {
+    vi.setSystemTime(new Date('2026-04-10T14:00:00Z'));
+    const goals = [mkGoal({ effectiveFrom: '2026-04-01', limit: 2 })];
+    const events = [
+      mkEvent({ id: '1', timestamp: '2026-04-08T08:00:00-03:00' }),
+      mkEvent({ id: '2', timestamp: '2026-04-08T10:00:00-03:00' }),
+      mkEvent({ id: '3', timestamp: '2026-04-08T12:00:00-03:00' }),
+      mkEvent({ id: '4', timestamp: '2026-04-09T08:00:00-03:00' }),
+      mkEvent({ id: '5', timestamp: '2026-04-10T08:00:00-03:00' }),
+    ];
+    expect(getCurrentStreak(events, goals)).toBe(2);
+  });
+
+  it('stops at a no-goal day going backward', () => {
+    vi.setSystemTime(new Date('2026-04-10T14:00:00Z'));
+    const goals = [mkGoal({ effectiveFrom: '2026-04-09', limit: 10 })];
+    const events = [
+      mkEvent({ id: '1', timestamp: '2026-04-08T08:00:00-03:00' }),
+      mkEvent({ id: '2', timestamp: '2026-04-09T08:00:00-03:00' }),
+      mkEvent({ id: '3', timestamp: '2026-04-10T08:00:00-03:00' }),
+    ];
+    expect(getCurrentStreak(events, goals)).toBe(2);
+  });
+
+  it('counts days with zero events as within', () => {
+    vi.setSystemTime(new Date('2026-04-10T14:00:00Z'));
+    const goals = [mkGoal({ effectiveFrom: '2026-04-01', limit: 5 })];
+    const events = [
+      mkEvent({ id: '1', timestamp: '2026-04-10T08:00:00-03:00' }),
+    ];
+    expect(getCurrentStreak(events, goals)).toBe(10);
+  });
+
+  it('handles 5+ consecutive day scenario', () => {
+    vi.setSystemTime(new Date('2026-04-08T14:00:00Z'));
+    const goals = [mkGoal({ effectiveFrom: '2026-04-01', limit: 3 })];
+    const events = [
+      mkEvent({ id: '1', timestamp: '2026-04-03T10:00:00-03:00' }),
+      mkEvent({ id: '2', timestamp: '2026-04-04T10:00:00-03:00' }),
+      mkEvent({ id: '3', timestamp: '2026-04-04T12:00:00-03:00' }),
+      mkEvent({ id: '4', timestamp: '2026-04-06T10:00:00-03:00' }),
+      mkEvent({ id: '5', timestamp: '2026-04-07T08:00:00-03:00' }),
+      mkEvent({ id: '6', timestamp: '2026-04-07T10:00:00-03:00' }),
+      mkEvent({ id: '7', timestamp: '2026-04-07T12:00:00-03:00' }),
+      mkEvent({ id: '8', timestamp: '2026-04-08T08:00:00-03:00' }),
+    ];
+    expect(getCurrentStreak(events, goals)).toBe(8);
   });
 });
