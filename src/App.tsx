@@ -1,12 +1,15 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { Settings } from 'lucide-react';
 import { Toaster } from '@/components/ui/toaster';
 import { Toaster as Sonner } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { Button } from '@/components/ui/button';
 import { CounterCard } from '@/components/CounterCard';
 import { CalendarView } from '@/components/CalendarView';
 import { NewEventDrawer } from '@/components/NewEventDrawer';
 import { EditDayDialog } from '@/components/EditDayDialog';
+import { SettingsDrawer } from '@/components/SettingsDrawer';
 import { useTracker } from '@/hooks/useTracker';
 import { EventType } from '@/types';
 
@@ -14,6 +17,7 @@ const App = () => {
   const tracker = useTracker();
   const [drawerType, setDrawerType] = useState<EventType | null>(null);
   const [editingDay, setEditingDay] = useState<string | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const totals = tracker.getTodayTotals();
 
@@ -33,11 +37,20 @@ const App = () => {
       <Sonner />
       <div className="min-h-screen bg-background">
         <div className="max-w-6xl mx-auto px-4 py-6 sm:px-6 sm:py-8">
-          <header className="text-center mb-8">
+          <header className="relative text-center mb-8">
             <h1 className="text-4xl sm:text-5xl font-bold text-foreground mb-2">
               Smoking Tracker
             </h1>
             <p className="text-muted-foreground">do but don't forget</p>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setSettingsOpen(true)}
+              aria-label="Configurações"
+              className="absolute top-0 right-0"
+            >
+              <Settings className="w-5 h-5" />
+            </Button>
           </header>
 
           <div className="grid grid-cols-2 gap-4 sm:gap-6 mb-8">
@@ -56,6 +69,7 @@ const App = () => {
           <CalendarView
             getDayTotals={tracker.getDayTotals}
             onDayClick={(dayKey) => setEditingDay(dayKey)}
+            events={tracker.events}
           />
         </div>
 
@@ -73,6 +87,13 @@ const App = () => {
           events={dayEvents}
           onRemoveEvent={tracker.removeEvent}
           onClearDay={tracker.clearDay}
+        />
+
+        <SettingsDrawer
+          open={settingsOpen}
+          onOpenChange={setSettingsOpen}
+          onExport={tracker.exportEvents}
+          onImport={tracker.importEvents}
         />
       </div>
     </TooltipProvider>
