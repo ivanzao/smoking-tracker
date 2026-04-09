@@ -1,21 +1,56 @@
+import { useMemo, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Cigarette, Leaf } from 'lucide-react';
-import { format, parseISO, startOfMonth, endOfMonth, subDays } from 'date-fns';
+import { Button } from '@/components/ui/button';
+import { Cigarette, Leaf, ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+  format,
+  parseISO,
+  startOfMonth,
+  endOfMonth,
+  subDays,
+  addMonths,
+  subMonths,
+} from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { MonthlyChart } from './MonthlyChart';
-import { getDaysInRange, todayKey } from '@/lib/events';
-import { DayTotals } from '@/types';
+import {
+  getDaysInRange,
+  getEarliestEventMonth,
+  getMonthKey,
+  todayKey,
+} from '@/lib/events';
+import { DayTotals, TrackerEvent } from '@/types';
 
 interface CalendarViewProps {
   getDayTotals: (dayKey: string) => DayTotals;
   onDayClick: (dayKey: string) => void;
+  events: TrackerEvent[];
 }
 
-export const CalendarView = ({ getDayTotals, onDayClick }: CalendarViewProps) => {
+export const CalendarView = ({ getDayTotals, onDayClick, events }: CalendarViewProps) => {
   const today = new Date();
+  const [viewMonth, setViewMonth] = useState<Date>(() => startOfMonth(new Date()));
+
+  const earliest = useMemo(() => getEarliestEventMonth(events), [events]);
+  const currentMonthKey = getMonthKey(today);
+  const viewMonthKey = getMonthKey(viewMonth);
+
+  const canGoBack = earliest !== null && viewMonth > earliest;
+  const canGoForward = viewMonthKey !== currentMonthKey;
+
+  const goBack = () => {
+    if (canGoBack) setViewMonth((m) => subMonths(m, 1));
+  };
+  const goForward = () => {
+    if (canGoForward) setViewMonth((m) => addMonths(m, 1));
+  };
+
   const weekDays = getDaysInRange(subDays(today, 6), today);
-  const monthDays = getDaysInRange(startOfMonth(today), endOfMonth(today));
+  const monthDays = getDaysInRange(startOfMonth(viewMonth), endOfMonth(viewMonth));
   const todayStr = todayKey();
+
+  const monthLabel = format(viewMonth, 'MMMM yyyy', { locale: ptBR });
 
   const DayCell = ({ dayKey }: { dayKey: string }) => {
     const totals = getDayTotals(dayKey);
@@ -71,6 +106,27 @@ export const CalendarView = ({ getDayTotals, onDayClick }: CalendarViewProps) =>
         </TabsContent>
 
         <TabsContent value="month" className="mt-0">
+          <div className="flex items-center justify-between mb-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={goBack}
+              disabled={!canGoBack}
+              aria-label="Mês anterior"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </Button>
+            <span className="text-sm font-medium capitalize">{monthLabel}</span>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={goForward}
+              disabled={!canGoForward}
+              aria-label="Próximo mês"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </Button>
+          </div>
           <MonthlyChart dayKeys={monthDays} getDayTotals={getDayTotals} onDayClick={onDayClick} />
         </TabsContent>
       </Tabs>

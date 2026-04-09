@@ -1,4 +1,4 @@
-import { eachDayOfInterval, format } from 'date-fns';
+import { eachDayOfInterval, format, parseISO, startOfMonth } from 'date-fns';
 import { TrackerEvent, DayTotals } from '@/types';
 
 /** Extract local date (YYYY-MM-DD) from an ISO timestamp with offset. */
@@ -37,4 +37,18 @@ export function getDaysInRange(from: Date, to: Date): string[] {
   return eachDayOfInterval({ start: from, end: to }).map((d) =>
     format(d, 'yyyy-MM-dd')
   );
+}
+
+export function getMonthKey(date: Date): string {
+  return format(date, 'yyyy-MM');
+}
+
+export function getEarliestEventMonth(events: TrackerEvent[]): Date | null {
+  if (events.length === 0) return null;
+  let earliestTs = events[0].timestamp;
+  for (const e of events) {
+    if (e.timestamp < earliestTs) earliestTs = e.timestamp;
+  }
+  const dayKey = getDayKey(earliestTs);
+  return startOfMonth(parseISO(dayKey + 'T12:00:00'));
 }

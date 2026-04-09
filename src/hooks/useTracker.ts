@@ -8,6 +8,12 @@ import {
   nowLocalIso,
   todayKey,
 } from '@/lib/events';
+import {
+  ImportError,
+  mergeEvents,
+  parseImport,
+  serializeExport,
+} from '@/lib/export';
 
 const STORAGE_KEY = 'smoking-tracker';
 
@@ -20,7 +26,13 @@ export interface UseTrackerAPI {
   getDayTotals(dayKey: string): DayTotals;
   getEventsForDay(dayKey: string): TrackerEvent[];
   getTodayTotals(): DayTotals;
+  exportEvents(): string;
+  importEvents(raw: string): ImportOutcome;
 }
+
+export type ImportOutcome =
+  | { ok: true; added: number; skipped: number }
+  | { ok: false; error: ImportError };
 
 function loadFromStorage(): TrackerEvent[] {
   try {
@@ -81,6 +93,24 @@ export function useTracker(): UseTrackerAPI {
     [events]
   );
 
+  const exportEvents = useCallback<UseTrackerAPI['exportEvents']>(
+    () => serializeExport(events),
+    [events]
+  );
+
+  const importEvents = useCallback<UseTrackerAPI['importEvents']>(
+    (raw) => {
+      const parsed = parseImport(raw);
+      if (!parsed.ok) {
+        return { ok: false, error: parsed.error };
+      }
+      const { merged, added, skipped } = mergeEvents(events, parsed.events);
+      setEvents(merged);
+      return { ok: true, added, skipped };
+    },
+    [events]
+  );
+
   return {
     events,
     addEvent,
@@ -90,5 +120,7 @@ export function useTracker(): UseTrackerAPI {
     getDayTotals,
     getEventsForDay,
     getTodayTotals,
+    exportEvents,
+    importEvents,
   };
 }
