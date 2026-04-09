@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { EventType, TrackerEvent, DayTotals } from '@/types';
+import { EventType, GoalEntry, TrackerEvent, DayTotals } from '@/types';
 import {
   getDayKey,
   getDayTotals as calcDayTotals,
@@ -9,13 +9,23 @@ import {
   todayKey,
 } from '@/lib/events';
 import {
+  getCurrentGoal as calcCurrentGoal,
+  getDayGoalStatus as calcDayGoalStatus,
+  getCurrentStreak as calcCurrentStreak,
+  getRollingAverage as calcRollingAverage,
+  getAverageDelta as calcAverageDelta,
+  DayGoalStatus,
+} from '@/lib/stats';
+import {
   ImportError,
   mergeEvents,
+  mergeGoals,
   parseImport,
   serializeExport,
 } from '@/lib/export';
 
 const STORAGE_KEY = 'smoking-tracker';
+const DAY_KEY_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 export interface UseTrackerAPI {
   events: TrackerEvent[];
@@ -28,32 +38,62 @@ export interface UseTrackerAPI {
   getTodayTotals(): DayTotals;
   exportEvents(): string;
   importEvents(raw: string): ImportOutcome;
+
+  goals: GoalEntry[];
+  setGoal(limit: number | null): void;
+  getCurrentGoal(): GoalEntry | null;
+  getDayGoalStatus(dayKey: string): DayGoalStatus;
+  getCurrentStreak(): number;
+  getRollingAverage(days: number): number;
+  getAverageDelta(days: number): number | null;
 }
 
 export type ImportOutcome =
-  | { ok: true; added: number; skipped: number }
+  | { ok: true; added: number; skipped: number; goalsAdded: number; goalsSkipped: number }
   | { ok: false; error: ImportError };
 
-function loadFromStorage(): TrackerEvent[] {
+function isValidGoalEntry(value: unknown): value is GoalEntry {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
+  const obj = value as Record<string, unknown>;
+  if (typeof obj.id !== 'string') return false;
+  if (typeof obj.limit !== 'number' || !Number.isInteger(obj.limit) || obj.limit <= 0) return false;
+  if (typeof obj.effectiveFrom !== 'string' || !DAY_KEY_RE.test(obj.effectiveFrom)) return false;
+  return true;
+}
+
+function loadFromStorage(): { events: TrackerEvent[]; goals: GoalEntry[] } {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
+    if (!raw) return { events: [], goals: [] };
     const parsed = JSON.parse(raw);
-    if (parsed && Array.isArray(parsed.events)) {
-      return parsed.events as TrackerEvent[];
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return { events: [], goals: [] };
+    if (!Array.isArray(parsed.events)) return { events: [], goals: [] };
+
+    if ('goals' in parsed) {
+      if (!Array.isArray(parsed.goals)) return { events: [], goals: [] };
+      for (const g of parsed.goals) {
+        if (!isValidGoalEntry(g)) return { events: [], goals: [] };
+      }
+      const goals = (parsed.goals as GoalEntry[]).sort((a, b) =>
+        a.effectiveFrom < b.effectiveFrom ? -1 : a.effectiveFrom > b.effectiveFrom ? 1 : 0
+      );
+      return { events: parsed.events as TrackerEvent[], goals };
     }
-    return [];
+
+    return { events: parsed.events as TrackerEvent[], goals: [] };
   } catch {
-    return [];
+    return { events: [], goals: [] };
   }
 }
 
 export function useTracker(): UseTrackerAPI {
-  const [events, setEvents] = useState<TrackerEvent[]>(() => loadFromStorage());
+  const [initial] = useState(loadFromStorage);
+  const [events, setEvents] = useState<TrackerEvent[]>(initial.events);
+  const [goals, setGoals] = useState<GoalEntry[]>(initial.goals);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ events }));
-  }, [events]);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ events, goals }));
+  }, [events, goals]);
 
   const addEvent = useCallback<UseTrackerAPI['addEvent']>((input) => {
     const event: TrackerEvent = {
@@ -93,9 +133,60 @@ export function useTracker(): UseTrackerAPI {
     [events]
   );
 
-  const exportEvents = useCallback<UseTrackerAPI['exportEvents']>(
-    () => serializeExport(events),
+  const setGoal = useCallback<UseTrackerAPI['setGoal']>((limit) => {
+    if (limit === null) {
+      setGoals((prev) => {
+        const current = calcCurrentGoal(prev);
+        if (!current) return prev;
+        return prev.filter((g) => g.id !== current.id);
+      });
+      return;
+    }
+    if (typeof limit !== 'number' || !Number.isFinite(limit) || !Number.isInteger(limit) || limit <= 0) return;
+    setGoals((prev) => {
+      const current = calcCurrentGoal(prev);
+      if (current && current.limit === limit) return prev;
+      const today = todayKey();
+      const existingToday = prev.findIndex((g) => g.effectiveFrom === today);
+      if (existingToday >= 0) {
+        const updated = [...prev];
+        updated[existingToday] = { ...updated[existingToday], limit };
+        return updated;
+      }
+      return [...prev, { id: uuidv4(), limit, effectiveFrom: today }].sort(
+        (a, b) => (a.effectiveFrom < b.effectiveFrom ? -1 : a.effectiveFrom > b.effectiveFrom ? 1 : 0)
+      );
+    });
+  }, []);
+
+  const getCurrentGoal = useCallback<UseTrackerAPI['getCurrentGoal']>(
+    () => calcCurrentGoal(goals),
+    [goals]
+  );
+
+  const getDayGoalStatus = useCallback<UseTrackerAPI['getDayGoalStatus']>(
+    (dayKey) => calcDayGoalStatus(events, goals, dayKey),
+    [events, goals]
+  );
+
+  const getCurrentStreak = useCallback<UseTrackerAPI['getCurrentStreak']>(
+    () => calcCurrentStreak(events, goals),
+    [events, goals]
+  );
+
+  const getRollingAverage = useCallback<UseTrackerAPI['getRollingAverage']>(
+    (days) => calcRollingAverage(events, days),
     [events]
+  );
+
+  const getAverageDelta = useCallback<UseTrackerAPI['getAverageDelta']>(
+    (days) => calcAverageDelta(events, days),
+    [events]
+  );
+
+  const exportEvents = useCallback<UseTrackerAPI['exportEvents']>(
+    () => serializeExport(events, goals),
+    [events, goals]
   );
 
   const importEvents = useCallback<UseTrackerAPI['importEvents']>(
@@ -104,11 +195,19 @@ export function useTracker(): UseTrackerAPI {
       if (!parsed.ok) {
         return { ok: false, error: parsed.error };
       }
-      const { merged, added, skipped } = mergeEvents(events, parsed.events);
-      setEvents(merged);
-      return { ok: true, added, skipped };
+      const evtResult = mergeEvents(events, parsed.events);
+      const goalResult = mergeGoals(goals, parsed.goals);
+      setEvents(evtResult.merged);
+      setGoals(goalResult.merged);
+      return {
+        ok: true,
+        added: evtResult.added,
+        skipped: evtResult.skipped,
+        goalsAdded: goalResult.added,
+        goalsSkipped: goalResult.skipped,
+      };
     },
-    [events]
+    [events, goals]
   );
 
   return {
@@ -122,5 +221,12 @@ export function useTracker(): UseTrackerAPI {
     getTodayTotals,
     exportEvents,
     importEvents,
+    goals,
+    setGoal,
+    getCurrentGoal,
+    getDayGoalStatus,
+    getCurrentStreak,
+    getRollingAverage,
+    getAverageDelta,
   };
 }

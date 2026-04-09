@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useTracker } from './useTracker';
-import { TrackerEvent } from '@/types';
+import { TrackerEvent, GoalEntry } from '@/types';
 
 const STORAGE_KEY = 'smoking-tracker';
 
@@ -190,7 +190,8 @@ describe('useTracker — export/import', () => {
       outcome = result.current.importEvents(JSON.stringify(file));
     });
 
-    expect(outcome!).toEqual({ ok: true, added: 1, skipped: 0 });
+    expect(outcome!.ok).toBe(true);
+    if (outcome!.ok) { expect(outcome!.added).toBe(1); expect(outcome!.skipped).toBe(0); }
     expect(result.current.events.map((e) => e.id)).toEqual(['a', 'b']);
   });
 
@@ -214,7 +215,8 @@ describe('useTracker — export/import', () => {
       outcome = result.current.importEvents(JSON.stringify(file));
     });
 
-    expect(outcome!).toEqual({ ok: true, added: 0, skipped: 1 });
+    expect(outcome!.ok).toBe(true);
+    if (outcome!.ok) { expect(outcome!.added).toBe(0); expect(outcome!.skipped).toBe(1); }
     expect(result.current.events).toEqual(seed);
   });
 
@@ -232,5 +234,118 @@ describe('useTracker — export/import', () => {
 
     expect(outcome!).toEqual({ ok: false, error: 'invalid-json' });
     expect(result.current.events).toEqual(seed);
+  });
+});
+
+describe('useTracker — goals boot', () => {
+  it('starts with empty goals when storage has no goals field', () => {
+    const events = [
+      { id: '1', timestamp: '2026-04-08T12:00:00-03:00', type: 'tobacco' as const },
+    ];
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ events }));
+    const { result } = renderHook(() => useTracker());
+    expect(result.current.goals).toEqual([]);
+    expect(result.current.events).toEqual(events);
+  });
+
+  it('loads valid goals from storage', () => {
+    const goals: GoalEntry[] = [
+      { id: 'g1', limit: 10, effectiveFrom: '2026-04-01' },
+    ];
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ events: [], goals }));
+    const { result } = renderHook(() => useTracker());
+    expect(result.current.goals).toEqual(goals);
+  });
+
+  it('discards everything when goals array has invalid entry', () => {
+    const goals = [{ id: 'g1', limit: -1, effectiveFrom: '2026-04-01' }];
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ events: [], goals }));
+    const { result } = renderHook(() => useTracker());
+    expect(result.current.events).toEqual([]);
+    expect(result.current.goals).toEqual([]);
+  });
+
+  it('discards everything when goals is not an array', () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ events: [], goals: 'bad' }));
+    const { result } = renderHook(() => useTracker());
+    expect(result.current.events).toEqual([]);
+    expect(result.current.goals).toEqual([]);
+  });
+});
+
+describe('useTracker — setGoal', () => {
+  beforeEach(() => { vi.useFakeTimers(); });
+  afterEach(() => { vi.useRealTimers(); });
+
+  it('creates first goal entry with effectiveFrom = today', () => {
+    vi.setSystemTime(new Date('2026-04-08T14:00:00Z'));
+    const { result } = renderHook(() => useTracker());
+    act(() => { result.current.setGoal(10); });
+    expect(result.current.goals).toHaveLength(1);
+    expect(result.current.goals[0].limit).toBe(10);
+    expect(result.current.goals[0].effectiveFrom).toMatch(/^2026-04-08$/);
+  });
+
+  it('is no-op when value equals current goal limit', () => {
+    vi.setSystemTime(new Date('2026-04-08T14:00:00Z'));
+    const goals: GoalEntry[] = [
+      { id: 'g1', limit: 10, effectiveFrom: '2026-04-01' },
+    ];
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ events: [], goals }));
+    const { result } = renderHook(() => useTracker());
+    act(() => { result.current.setGoal(10); });
+    expect(result.current.goals).toHaveLength(1);
+    expect(result.current.goals[0].id).toBe('g1');
+  });
+
+  it('overwrites same-day entry instead of creating duplicate', () => {
+    vi.setSystemTime(new Date('2026-04-08T14:00:00Z'));
+    const { result } = renderHook(() => useTracker());
+    act(() => { result.current.setGoal(10); });
+    act(() => { result.current.setGoal(8); });
+    expect(result.current.goals).toHaveLength(1);
+    expect(result.current.goals[0].limit).toBe(8);
+  });
+
+  it('appends new entry for a different day', () => {
+    vi.setSystemTime(new Date('2026-04-10T14:00:00Z'));
+    const goals: GoalEntry[] = [
+      { id: 'g1', limit: 12, effectiveFrom: '2026-04-01' },
+    ];
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ events: [], goals }));
+    const { result } = renderHook(() => useTracker());
+    act(() => { result.current.setGoal(8); });
+    expect(result.current.goals).toHaveLength(2);
+    expect(result.current.goals[1].limit).toBe(8);
+    expect(result.current.goals[1].effectiveFrom).toBe('2026-04-10');
+  });
+
+  it('removes vigent goal when passed null', () => {
+    vi.setSystemTime(new Date('2026-04-08T14:00:00Z'));
+    const goals: GoalEntry[] = [
+      { id: 'g1', limit: 10, effectiveFrom: '2026-04-01' },
+    ];
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ events: [], goals }));
+    const { result } = renderHook(() => useTracker());
+    act(() => { result.current.setGoal(null); });
+    expect(result.current.goals).toEqual([]);
+  });
+
+  it('ignores invalid values (0, negative, NaN)', () => {
+    vi.setSystemTime(new Date('2026-04-08T14:00:00Z'));
+    const { result } = renderHook(() => useTracker());
+    act(() => { result.current.setGoal(0); });
+    act(() => { result.current.setGoal(-5); });
+    act(() => { result.current.setGoal(NaN); });
+    expect(result.current.goals).toEqual([]);
+  });
+
+  it('persists goals to localStorage', () => {
+    vi.setSystemTime(new Date('2026-04-08T14:00:00Z'));
+    const { result } = renderHook(() => useTracker());
+    act(() => { result.current.setGoal(10); });
+    const raw = JSON.parse(localStorage.getItem(STORAGE_KEY)!);
+    expect(raw.goals).toHaveLength(1);
+    expect(raw.goals[0].limit).toBe(10);
   });
 });
