@@ -151,3 +151,86 @@ describe('useTracker — queries', () => {
     expect(result.current.getEventsForDay('2026-04-08').map((e) => e.id)).toEqual(['1']);
   });
 });
+
+describe('useTracker — export/import', () => {
+  it('exportEvents returns JSON that round-trips into the same events', () => {
+    const seed: TrackerEvent[] = [
+      { id: 'a', timestamp: '2026-04-08T10:00:00-03:00', type: 'tobacco', location: 'casa' },
+      { id: 'b', timestamp: '2026-04-08T18:00:00-03:00', type: 'cannabis' },
+    ];
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ events: seed }));
+    const { result } = renderHook(() => useTracker());
+
+    const json = result.current.exportEvents();
+    const parsed = JSON.parse(json);
+    expect(parsed.version).toBe(1);
+    expect(parsed.events).toEqual(seed);
+  });
+
+  it('importEvents merges new events into the existing state', () => {
+    const seed: TrackerEvent[] = [
+      { id: 'a', timestamp: '2026-04-08T10:00:00-03:00', type: 'tobacco' },
+    ];
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ events: seed }));
+    const { result } = renderHook(() => useTracker());
+
+    const incoming: TrackerEvent[] = [
+      { id: 'b', timestamp: '2026-04-08T11:00:00-03:00', type: 'cannabis' },
+    ];
+    const file = {
+      version: 1,
+      exportedAt: '2026-04-08T20:00:00-03:00',
+      eventCount: 1,
+      dateRange: { from: '2026-04-08', to: '2026-04-08' },
+      events: incoming,
+    };
+
+    let outcome: ReturnType<typeof result.current.importEvents>;
+    act(() => {
+      outcome = result.current.importEvents(JSON.stringify(file));
+    });
+
+    expect(outcome!).toEqual({ ok: true, added: 1, skipped: 0 });
+    expect(result.current.events.map((e) => e.id)).toEqual(['a', 'b']);
+  });
+
+  it('importEvents reports skipped duplicates without changing state', () => {
+    const seed: TrackerEvent[] = [
+      { id: 'a', timestamp: '2026-04-08T10:00:00-03:00', type: 'tobacco' },
+    ];
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ events: seed }));
+    const { result } = renderHook(() => useTracker());
+
+    const file = {
+      version: 1,
+      exportedAt: '2026-04-08T20:00:00-03:00',
+      eventCount: 1,
+      dateRange: { from: '2026-04-08', to: '2026-04-08' },
+      events: seed,
+    };
+
+    let outcome: ReturnType<typeof result.current.importEvents>;
+    act(() => {
+      outcome = result.current.importEvents(JSON.stringify(file));
+    });
+
+    expect(outcome!).toEqual({ ok: true, added: 0, skipped: 1 });
+    expect(result.current.events).toEqual(seed);
+  });
+
+  it('importEvents returns error and leaves state untouched on invalid JSON', () => {
+    const seed: TrackerEvent[] = [
+      { id: 'a', timestamp: '2026-04-08T10:00:00-03:00', type: 'tobacco' },
+    ];
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ events: seed }));
+    const { result } = renderHook(() => useTracker());
+
+    let outcome: ReturnType<typeof result.current.importEvents>;
+    act(() => {
+      outcome = result.current.importEvents('not json');
+    });
+
+    expect(outcome!).toEqual({ ok: false, error: 'invalid-json' });
+    expect(result.current.events).toEqual(seed);
+  });
+});
