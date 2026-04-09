@@ -21,14 +21,16 @@ import {
   todayKey,
 } from '@/lib/events';
 import { DayTotals, TrackerEvent } from '@/types';
+import { DayGoalStatus } from '@/lib/stats';
 
 interface CalendarViewProps {
   getDayTotals: (dayKey: string) => DayTotals;
+  getDayGoalStatus: (dayKey: string) => DayGoalStatus;
   onDayClick: (dayKey: string) => void;
   events: TrackerEvent[];
 }
 
-export const CalendarView = ({ getDayTotals, onDayClick, events }: CalendarViewProps) => {
+export const CalendarView = ({ getDayTotals, getDayGoalStatus, onDayClick, events }: CalendarViewProps) => {
   const today = new Date();
   const [viewMonth, setViewMonth] = useState<Date>(() => startOfMonth(new Date()));
 
@@ -57,16 +59,25 @@ export const CalendarView = ({ getDayTotals, onDayClick, events }: CalendarViewP
     const total = totals.tobacco + totals.cannabis;
     const isToday = dayKey === todayStr;
     const date = parseISO(dayKey + 'T00:00:00');
+    const goalStatus = getDayGoalStatus(dayKey);
 
     return (
       <div
         onClick={() => onDayClick(dayKey)}
         className={`
-          flex flex-col items-center gap-2 p-3 rounded-2xl transition-all cursor-pointer hover:scale-105 active:scale-95
+          relative flex flex-col items-center gap-2 p-3 rounded-2xl transition-all cursor-pointer hover:scale-105 active:scale-95
           ${isToday ? 'bg-accent ring-2 ring-primary' : 'bg-card'}
           ${total > 0 ? 'opacity-100' : 'opacity-40'}
         `}
       >
+        {goalStatus !== 'no-goal' && (
+          <span
+            aria-hidden
+            className={`absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full ${
+              goalStatus === 'within' ? 'bg-emerald-500' : 'bg-rose-500'
+            }`}
+          />
+        )}
         <div className="text-xs font-medium text-muted-foreground">
           {format(date, 'dd MMM')}
         </div>
