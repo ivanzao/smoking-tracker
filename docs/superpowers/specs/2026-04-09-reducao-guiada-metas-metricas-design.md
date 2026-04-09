@@ -79,10 +79,12 @@ export interface StorageShape {
 
 ### Export / import
 
-- Export serializa `goals` junto com `events`. Se o formato de export tiver um número de versão, ele é incrementado.
-- Import valida `goals` com o mesmo rigor do boot. Qualquer `GoalEntry` inválido rejeita o arquivo inteiro (mesma política do #2 pra `events`). Sem merge parcial.
-- Arquivo exportado antes do #3 (sem campo `goals`) continua funcionando no import: carrega `events` e trata `goals` como `[]`.
-- Import é substituição total de estado: `events` **e** `goals` são substituídos juntos, atomicamente. Não há importação seletiva.
+- O formato de export existente é `EXPORT_VERSION = 1`. Este sub-projeto bumpa pra `EXPORT_VERSION = 2`, acrescentando o campo `goals` no payload.
+- Export sempre grava a versão mais nova (`2`).
+- Import aceita **ambas** as versões: `v1` (sem `goals`, trata como `[]`) e `v2` (valida `goals`). Qualquer outra versão retorna `'unsupported-version'`.
+- Import valida `goals` com o mesmo rigor do boot. Qualquer `GoalEntry` inválido rejeita o arquivo inteiro, retornando um novo `ImportError` `'invalid-goals'`.
+- Import segue o padrão já estabelecido no #2: **merge-by-id**, não substituição. `events` e `goals` ambos passam por merge (entradas com `id` já existente são ignoradas, novas são adicionadas). Isso mantém o histórico de metas do usuário intacto quando ele importa um arquivo de outro backup.
+- O `ImportOutcome` de sucesso ganha contadores de `goalsAdded` e `goalsSkipped` além dos já existentes `added`/`skipped` de eventos.
 
 ## Arquitetura de módulos
 
@@ -359,11 +361,14 @@ Ganha:
 
 **`src/lib/export.test.ts`** (adições):
 
-- Export inclui `goals` no payload.
-- Import de payload sem `goals` carrega `events` e zera `goals`.
-- Import com `goals` não-array rejeita arquivo inteiro.
-- Import com `GoalEntry` inválido (`limit` zero, `effectiveFrom` malformado) rejeita.
-- Import com `goals` válido substitui completamente o histórico anterior.
+- Export grava `version: 2` e inclui `goals` no payload.
+- `parseImport` aceita arquivo `v1` sem campo `goals` (retorna `goals: []`).
+- `parseImport` aceita arquivo `v2` com `goals` válido.
+- `parseImport` rejeita arquivo `v2` com `goals` não-array → `'invalid-goals'`.
+- `parseImport` rejeita arquivo `v2` com `GoalEntry` inválido (`limit` zero, `effectiveFrom` malformado) → `'invalid-goals'`.
+- `parseImport` rejeita versão desconhecida (ex: `version: 99`) → `'unsupported-version'`.
+- `mergeGoals` (nova função análoga a `mergeEvents`) ignora entradas com `id` já existente.
+- `mergeGoals` mantém lista ordenada por `effectiveFrom` asc.
 
 ## Critérios de aceitação
 
@@ -384,9 +389,10 @@ Ganha:
 15. Salvar meta com o mesmo valor da meta vigente é no-op (não cria duplicata no histórico).
 16. Salvar meta duas vezes no mesmo dia com valores diferentes resulta em uma única entrada (com o último valor).
 17. Remover meta pede confirmação via `window.confirm` e remove a entrada vigente.
-18. Export JSON inclui o campo `goals` no payload.
-19. Importar arquivo sem `goals` funciona (carrega events, zera goals).
-20. Importar arquivo com `goals` inválido rejeita o arquivo inteiro sem mutar estado.
+18. Export JSON grava `version: 2` e inclui o campo `goals` no payload.
+19. Importar arquivo `v1` (sem `goals`) funciona: eventos passam pelo merge normal e `goals` permanece inalterado.
+20. Importar arquivo com `goals` inválido retorna `ImportError: 'invalid-goals'` sem mutar estado.
+25. Importar arquivo `v2` válido faz merge-by-id tanto de `events` quanto de `goals` (entradas com `id` duplicado são ignoradas).
 21. Recarregar a página preserva meta atual, histórico de metas, e todos os eventos.
 22. `npm test` roda a suíte inteira (stats, events, useTracker, export) e passa.
 23. `npm run build` gera o HTML único sem warnings novos.
