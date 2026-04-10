@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { EditEventDrawer } from './EditEventDrawer';
 import { TrackerEvent } from '@/types';
 
 interface EditDayDialogProps {
@@ -21,6 +22,7 @@ interface EditDayDialogProps {
   onRemoveEvent: (id: string) => void;
   onClearDay: (dayKey: string) => void;
   onUndo: () => void;
+  onUpdateEvent: (id: string, patch: Partial<Omit<TrackerEvent, 'id'>>) => void;
 }
 
 export const EditDayDialog = ({
@@ -31,8 +33,10 @@ export const EditDayDialog = ({
   onRemoveEvent,
   onClearDay,
   onUndo,
+  onUpdateEvent,
 }: EditDayDialogProps) => {
   const [confirmClear, setConfirmClear] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<TrackerEvent | null>(null);
 
   const prettyDate = dayKey
     ? format(parseISO(dayKey + 'T00:00:00'), 'dd/MM/yyyy')
@@ -55,7 +59,10 @@ export const EditDayDialog = ({
     <Dialog
       open={open}
       onOpenChange={(next) => {
-        if (!next) setConfirmClear(false);
+        if (!next) {
+          setConfirmClear(false);
+          setEditingEvent(null);
+        }
         onOpenChange(next);
       }}
     >
@@ -76,7 +83,8 @@ export const EditDayDialog = ({
             return (
               <div
                 key={ev.id}
-                className="flex items-start gap-3 p-3 rounded-lg border bg-card"
+                onClick={() => setEditingEvent(ev)}
+                className="flex items-start gap-3 p-3 rounded-lg border bg-card cursor-pointer hover:bg-accent/50 transition-colors"
               >
                 <Icon className="w-5 h-5 mt-0.5 shrink-0" />
                 <div className="flex-1 min-w-0">
@@ -128,6 +136,12 @@ export const EditDayDialog = ({
             Fechar
           </Button>
         </DialogFooter>
+        <EditEventDrawer
+          open={editingEvent !== null}
+          onOpenChange={(isOpen) => { if (!isOpen) setEditingEvent(null); }}
+          event={editingEvent}
+          onSave={onUpdateEvent}
+        />
       </DialogContent>
     </Dialog>
   );

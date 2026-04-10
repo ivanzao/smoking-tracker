@@ -109,6 +109,7 @@ const App = () => {
           onRemoveEvent={tracker.removeEvent}
           onClearDay={tracker.clearDay}
           onUndo={tracker.executeUndo}
+          onUpdateEvent={tracker.updateEvent}
         />
 
         <SettingsDrawer
