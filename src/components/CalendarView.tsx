@@ -138,7 +138,7 @@ export const CalendarView = ({ getDayTotals, getDayGoalStatus, onDayClick, event
               <ChevronRight className="w-5 h-5" />
             </Button>
           </div>
-          <MonthlyChart dayKeys={monthDays} getDayTotals={getDayTotals} onDayClick={onDayClick} />
+          <MonthlyChart dayKeys={monthDays} getDayTotals={getDayTotals} onDayClick={onDayClick} events={events} />
         </TabsContent>
       </Tabs>
     </Card>

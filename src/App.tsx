@@ -7,6 +7,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
 import { CounterCard } from '@/components/CounterCard';
 import { CalendarView } from '@/components/CalendarView';
+import { MetricsCard } from '@/components/MetricsCard';
 import { NewEventDrawer } from '@/components/NewEventDrawer';
 import { EditDayDialog } from '@/components/EditDayDialog';
 import { SettingsDrawer } from '@/components/SettingsDrawer';
@@ -20,6 +21,7 @@ const App = () => {
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   const totals = tracker.getTodayTotals();
+  const currentGoal = tracker.getCurrentGoal();
 
   const handleSubmitEvent = (input: { type: EventType; location?: string; reason?: string }) => {
     tracker.addEvent(input);
@@ -66,8 +68,21 @@ const App = () => {
             />
           </div>
 
+          {currentGoal && (
+            <div className="mb-8">
+              <MetricsCard
+                todayTotal={totals.tobacco + totals.cannabis}
+                goalLimit={currentGoal.limit}
+                streak={tracker.getCurrentStreak()}
+                average7d={tracker.getRollingAverage(7)}
+                delta7d={tracker.getAverageDelta(7)}
+              />
+            </div>
+          )}
+
           <CalendarView
             getDayTotals={tracker.getDayTotals}
+            getDayGoalStatus={tracker.getDayGoalStatus}
             onDayClick={(dayKey) => setEditingDay(dayKey)}
             events={tracker.events}
           />
@@ -94,6 +109,8 @@ const App = () => {
           onOpenChange={setSettingsOpen}
           onExport={tracker.exportEvents}
           onImport={tracker.importEvents}
+          currentGoalLimit={currentGoal?.limit ?? null}
+          onSetGoal={tracker.setGoal}
         />
       </div>
     </TooltipProvider>
