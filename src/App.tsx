@@ -27,7 +27,13 @@ const App = () => {
     tracker.addEvent(input);
     toast.success(
       `+1 ${input.type === 'tobacco' ? 'tabaco' : 'cannabis'}`,
-      { duration: 2000 }
+      {
+        duration: 5000,
+        action: {
+          label: 'Desfazer',
+          onClick: () => tracker.executeUndo(),
+        },
+      }
     );
   };
 
