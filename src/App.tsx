@@ -45,17 +45,19 @@ const App = () => {
       <Sonner />
       <div className="min-h-screen bg-background">
         <div className="max-w-6xl mx-auto px-4 py-6 sm:px-6 sm:py-8">
-          <header className="relative text-center mb-8">
-            <h1 className="text-4xl sm:text-5xl font-bold text-foreground mb-2">
-              Smoking Tracker
-            </h1>
-            <p className="text-muted-foreground">do but don't forget</p>
+          <header className="flex items-start justify-between mb-5">
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight">
+                Smoking Tracker
+              </h1>
+              <p className="text-xs text-muted-foreground">do but don't forget</p>
+            </div>
             <Button
               variant="ghost"
               size="icon"
               onClick={() => setSettingsOpen(true)}
               aria-label="Configurações"
-              className="absolute top-0 right-0"
+              className="p-2 shrink-0"
             >
               <Settings className="w-5 h-5" />
             </Button>
