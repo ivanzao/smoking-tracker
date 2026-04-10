@@ -76,17 +76,15 @@ const App = () => {
             />
           </div>
 
-          {currentGoal && (
-            <div className="mb-8">
-              <MetricsCard
-                todayTotal={totals.tobacco + totals.cannabis}
-                goalLimit={currentGoal.limit}
-                streak={tracker.getCurrentStreak()}
-                average7d={tracker.getRollingAverage(7)}
-                delta7d={tracker.getAverageDelta(7)}
-              />
-            </div>
-          )}
+          <div className="mb-4">
+            <MetricsCard
+              todayTotal={totals.tobacco + totals.cannabis}
+              goalLimit={currentGoal?.limit ?? null}
+              streak={tracker.getCurrentStreak()}
+              average7d={tracker.getRollingAverage(7)}
+              delta7d={tracker.getAverageDelta(7)}
+            />
+          </div>
 
           <CalendarView
             getDayTotals={tracker.getDayTotals}

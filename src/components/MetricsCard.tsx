@@ -2,7 +2,7 @@ import { Card } from '@/components/ui/card';
 
 interface MetricsCardProps {
   todayTotal: number;
-  goalLimit: number;
+  goalLimit: number | null;
   streak: number;
   average7d: number;
   delta7d: number | null;
@@ -15,8 +15,9 @@ export const MetricsCard = ({
   average7d,
   delta7d,
 }: MetricsCardProps) => {
-  const isOver = todayTotal > goalLimit;
-  const progressPct = Math.min(100, (todayTotal / goalLimit) * 100);
+  const hasGoal = goalLimit !== null;
+  const isOver = hasGoal && todayTotal > goalLimit;
+  const progressPct = hasGoal ? Math.min(100, (todayTotal / goalLimit) * 100) : 0;
 
   const formatDelta = (d: number | null): { text: string; className: string } => {
     if (d === null) return { text: '—', className: 'text-muted-foreground' };
@@ -34,18 +35,22 @@ export const MetricsCard = ({
         {/* Today / Goal */}
         <div className="flex-1 px-3">
           <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
-            hoje / meta
+            {hasGoal ? 'hoje / meta' : 'hoje'}
           </div>
           <div className="text-xl font-bold mt-1">
             {todayTotal}
-            <span className="text-muted-foreground font-normal">/{goalLimit}</span>
+            {hasGoal && (
+              <span className="text-muted-foreground font-normal">/{goalLimit}</span>
+            )}
           </div>
-          <div className="h-1 bg-muted rounded-full mt-2 overflow-hidden">
-            <div
-              className={`h-full rounded-full transition-all ${isOver ? 'bg-rose-500' : 'bg-emerald-500'}`}
-              style={{ width: `${isOver ? 100 : progressPct}%` }}
-            />
-          </div>
+          {hasGoal && (
+            <div className="h-1 bg-muted rounded-full mt-2 overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all ${isOver ? 'bg-rose-500' : 'bg-emerald-500'}`}
+                style={{ width: `${isOver ? 100 : progressPct}%` }}
+              />
+            </div>
+          )}
         </div>
 
         {/* Streak */}
@@ -54,7 +59,7 @@ export const MetricsCard = ({
             streak
           </div>
           <div className="text-xl font-bold mt-1">
-            {streak > 0 ? `🔥 ${streak}` : '0'}
+            {hasGoal && streak > 0 ? `🔥 ${streak}` : '—'}
           </div>
           <div className="text-[10px] text-muted-foreground mt-2">
             dias na meta
