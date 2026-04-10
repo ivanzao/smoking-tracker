@@ -12,14 +12,14 @@ const META: Record<EventType, { label: string; icon: typeof Cigarette; hoverBord
   tobacco: {
     label: 'Tabaco',
     icon: Cigarette,
-    hoverBorder: 'hover:border-[#ba5f27]',
-    hoverBg: 'hover:bg-[#ba5f27]/5',
+    hoverBorder: 'hover:border-secondary',
+    hoverBg: 'hover:bg-secondary/5',
   },
   cannabis: {
     label: 'Cannabis',
     icon: Leaf,
-    hoverBorder: 'hover:border-[#27ba42]',
-    hoverBg: 'hover:bg-[#27ba42]/5',
+    hoverBorder: 'hover:border-primary',
+    hoverBg: 'hover:bg-primary/5',
   },
 };
 

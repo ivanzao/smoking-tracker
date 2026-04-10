@@ -76,11 +76,11 @@ export const MonthlyChart = ({ dayKeys, getDayTotals, onDayClick, events }: Mont
                     <div className="text-xs font-medium text-muted-foreground mb-1">{p.fullDate}</div>
                     <div className="flex gap-3">
                       <div className="flex items-center gap-1">
-                        <div className="w-2 h-2 rounded-full bg-[#ba5f27]" />
+                        <div className="w-2 h-2 rounded-full bg-secondary" />
                         <span className="text-sm font-bold">{p.tobacco}</span>
                       </div>
                       <div className="flex items-center gap-1">
-                        <div className="w-2 h-2 rounded-full bg-[#27ba42]" />
+                        <div className="w-2 h-2 rounded-full bg-primary" />
                         <span className="text-sm font-bold">{p.cannabis}</span>
                       </div>
                       <div className="flex items-center gap-1">
@@ -94,8 +94,8 @@ export const MonthlyChart = ({ dayKeys, getDayTotals, onDayClick, events }: Mont
               return null;
             }}
           />
-          <Bar dataKey="tobacco" fill="#ba5f27" fillOpacity={0.8} radius={[4, 4, 0, 0]} />
-          <Bar dataKey="cannabis" fill="#27ba42" fillOpacity={0.8} radius={[4, 4, 0, 0]} />
+          <Bar dataKey="tobacco" fill="hsl(var(--secondary))" fillOpacity={0.8} radius={[4, 4, 0, 0]} />
+          <Bar dataKey="cannabis" fill="hsl(var(--primary))" fillOpacity={0.8} radius={[4, 4, 0, 0]} />
           <Line
             dataKey="avg7d"
             type="monotone"
