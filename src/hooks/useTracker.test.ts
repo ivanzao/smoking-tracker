@@ -387,6 +387,91 @@ describe('useTracker — reactive streak', () => {
   });
 });
 
+describe('useTracker — undo', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-04-08T14:30:00Z'));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('starts with pendingUndo as null', () => {
+    const { result } = renderHook(() => useTracker());
+    expect(result.current.pendingUndo).toBeNull();
+  });
+
+  it('addEvent sets pendingUndo with type remove-event', () => {
+    const { result } = renderHook(() => useTracker());
+    act(() => { result.current.addEvent({ type: 'tobacco' }); });
+    expect(result.current.pendingUndo).toEqual({
+      type: 'remove-event',
+      eventId: result.current.events[0].id,
+    });
+  });
+
+  it('executeUndo after addEvent removes the added event', () => {
+    const { result } = renderHook(() => useTracker());
+    act(() => { result.current.addEvent({ type: 'tobacco' }); });
+    expect(result.current.events).toHaveLength(1);
+    act(() => { result.current.executeUndo(); });
+    expect(result.current.events).toHaveLength(0);
+    expect(result.current.pendingUndo).toBeNull();
+  });
+
+  it('removeEvent sets pendingUndo with type restore-event', () => {
+    const seed: TrackerEvent[] = [
+      { id: 'a', timestamp: '2026-04-08T10:00:00-03:00', type: 'tobacco', location: 'casa' },
+    ];
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ events: seed }));
+    const { result } = renderHook(() => useTracker());
+    act(() => { result.current.removeEvent('a'); });
+    expect(result.current.pendingUndo).toEqual({
+      type: 'restore-event',
+      event: seed[0],
+    });
+  });
+
+  it('executeUndo after removeEvent restores the event', () => {
+    const seed: TrackerEvent[] = [
+      { id: 'a', timestamp: '2026-04-08T10:00:00-03:00', type: 'tobacco' },
+    ];
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ events: seed }));
+    const { result } = renderHook(() => useTracker());
+    act(() => { result.current.removeEvent('a'); });
+    expect(result.current.events).toHaveLength(0);
+    act(() => { result.current.executeUndo(); });
+    expect(result.current.events).toHaveLength(1);
+    expect(result.current.events[0].id).toBe('a');
+    expect(result.current.pendingUndo).toBeNull();
+  });
+
+  it('new action overwrites previous pendingUndo', () => {
+    const { result } = renderHook(() => useTracker());
+    act(() => { result.current.addEvent({ type: 'tobacco' }); });
+    const firstId = result.current.events[0].id;
+    act(() => { result.current.addEvent({ type: 'cannabis' }); });
+    expect(result.current.pendingUndo).toEqual({
+      type: 'remove-event',
+      eventId: result.current.events[1].id,
+    });
+    // Undo only removes the second event
+    act(() => { result.current.executeUndo(); });
+    expect(result.current.events).toHaveLength(1);
+    expect(result.current.events[0].id).toBe(firstId);
+  });
+
+  it('executeUndo is no-op when pendingUndo is null', () => {
+    const { result } = renderHook(() => useTracker());
+    act(() => { result.current.addEvent({ type: 'tobacco' }); });
+    act(() => { result.current.executeUndo(); });
+    // Already undone, second call is no-op
+    act(() => { result.current.executeUndo(); });
+    expect(result.current.events).toHaveLength(0);
+  });
+});
+
 describe('useTracker — import with goals', () => {
   it('imports v2 file and merges goals', () => {
     const goals: GoalEntry[] = [

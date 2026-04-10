@@ -27,6 +27,10 @@ import {
 const STORAGE_KEY = 'smoking-tracker';
 const DAY_KEY_RE = /^\d{4}-\d{2}-\d{2}$/;
 
+export type UndoAction =
+  | { type: 'restore-event'; event: TrackerEvent }
+  | { type: 'remove-event'; eventId: string };
+
 export interface UseTrackerAPI {
   events: TrackerEvent[];
   addEvent(input: { type: EventType; location?: string; reason?: string }): void;
@@ -38,6 +42,9 @@ export interface UseTrackerAPI {
   getTodayTotals(): DayTotals;
   exportEvents(): string;
   importEvents(raw: string): ImportOutcome;
+
+  pendingUndo: UndoAction | null;
+  executeUndo(): void;
 
   goals: GoalEntry[];
   setGoal(limit: number | null): void;
@@ -90,24 +97,45 @@ export function useTracker(): UseTrackerAPI {
   const [initial] = useState(loadFromStorage);
   const [events, setEvents] = useState<TrackerEvent[]>(initial.events);
   const [goals, setGoals] = useState<GoalEntry[]>(initial.goals);
+  const [pendingUndo, setPendingUndo] = useState<UndoAction | null>(null);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ events, goals }));
   }, [events, goals]);
 
   const addEvent = useCallback<UseTrackerAPI['addEvent']>((input) => {
+    const id = uuidv4();
     const event: TrackerEvent = {
-      id: uuidv4(),
+      id,
       timestamp: nowLocalIso(),
       type: input.type,
       location: input.location?.trim() ? input.location.trim() : undefined,
       reason: input.reason?.trim() ? input.reason.trim() : undefined,
     };
     setEvents((prev) => [...prev, event]);
+    setPendingUndo({ type: 'remove-event', eventId: id });
   }, []);
 
   const removeEvent = useCallback<UseTrackerAPI['removeEvent']>((id) => {
-    setEvents((prev) => prev.filter((e) => e.id !== id));
+    setEvents((prev) => {
+      const event = prev.find((e) => e.id === id);
+      if (event) {
+        setPendingUndo({ type: 'restore-event', event });
+      }
+      return prev.filter((e) => e.id !== id);
+    });
+  }, []);
+
+  const executeUndo = useCallback<UseTrackerAPI['executeUndo']>(() => {
+    setPendingUndo((current) => {
+      if (!current) return null;
+      if (current.type === 'remove-event') {
+        setEvents((prev) => prev.filter((e) => e.id !== current.eventId));
+      } else {
+        setEvents((prev) => [...prev, current.event]);
+      }
+      return null;
+    });
   }, []);
 
   const updateEvent = useCallback<UseTrackerAPI['updateEvent']>((id, patch) => {
@@ -221,6 +249,8 @@ export function useTracker(): UseTrackerAPI {
     getTodayTotals,
     exportEvents,
     importEvents,
+    pendingUndo,
+    executeUndo,
     goals,
     setGoal,
     getCurrentGoal,
