@@ -43,13 +43,56 @@ const App = () => {
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <div className="min-h-screen bg-background">
-        <div className="max-w-6xl mx-auto px-4 py-6 sm:px-6 sm:py-8">
-          <header className="flex items-start justify-between mb-5">
+
+      {/* Mobile layout: single column, scrollable */}
+      <div className="sm:hidden min-h-screen bg-background px-4 py-6">
+        <header className="flex items-start justify-between mb-5">
+          <div>
+            <h1 className="text-xl font-bold text-foreground tracking-tight">Smoking Tracker</h1>
+            <p className="text-xs text-muted-foreground">do but don't forget</p>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setSettingsOpen(true)}
+            aria-label="Configurações"
+            className="p-2 shrink-0"
+          >
+            <Settings className="w-5 h-5" />
+          </Button>
+        </header>
+
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <CounterCard type="tobacco" count={totals.tobacco} onTap={() => setDrawerType('tobacco')} />
+          <CounterCard type="cannabis" count={totals.cannabis} onTap={() => setDrawerType('cannabis')} />
+        </div>
+
+        <div className="mb-4">
+          <MetricsCard
+            todayTotal={totals.tobacco + totals.cannabis}
+            goalLimit={currentGoal?.limit ?? null}
+            streak={tracker.getCurrentStreak()}
+            average7d={tracker.getRollingAverage(7)}
+            delta7d={tracker.getAverageDelta(7)}
+          />
+        </div>
+
+        <CalendarView
+          getDayTotals={tracker.getDayTotals}
+          getDayGoalStatus={tracker.getDayGoalStatus}
+          onDayClick={(dayKey) => setEditingDay(dayKey)}
+          events={tracker.events}
+          goalLimit={currentGoal?.limit ?? null}
+        />
+      </div>
+
+      {/* Desktop layout: two-panel, full viewport */}
+      <div className="hidden sm:flex h-screen overflow-hidden bg-background">
+        {/* Left panel — fixed width, no content stretching */}
+        <div className="w-80 shrink-0 flex flex-col gap-4 px-6 py-8 border-r border-border overflow-y-auto">
+          <header className="flex items-start justify-between">
             <div>
-              <h1 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight">
-                Smoking Tracker
-              </h1>
+              <h1 className="text-2xl font-bold text-foreground tracking-tight">Smoking Tracker</h1>
               <p className="text-xs text-muted-foreground">do but don't forget</p>
             </div>
             <Button
@@ -63,64 +106,59 @@ const App = () => {
             </Button>
           </header>
 
-          <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-4">
-            <CounterCard
-              type="tobacco"
-              count={totals.tobacco}
-              onTap={() => setDrawerType('tobacco')}
-            />
-            <CounterCard
-              type="cannabis"
-              count={totals.cannabis}
-              onTap={() => setDrawerType('cannabis')}
-            />
+          <div className="grid grid-cols-2 gap-3">
+            <CounterCard type="tobacco" count={totals.tobacco} onTap={() => setDrawerType('tobacco')} />
+            <CounterCard type="cannabis" count={totals.cannabis} onTap={() => setDrawerType('cannabis')} />
           </div>
 
-          <div className="mb-4">
-            <MetricsCard
-              todayTotal={totals.tobacco + totals.cannabis}
-              goalLimit={currentGoal?.limit ?? null}
-              streak={tracker.getCurrentStreak()}
-              average7d={tracker.getRollingAverage(7)}
-              delta7d={tracker.getAverageDelta(7)}
-            />
-          </div>
+          <MetricsCard
+            todayTotal={totals.tobacco + totals.cannabis}
+            goalLimit={currentGoal?.limit ?? null}
+            streak={tracker.getCurrentStreak()}
+            average7d={tracker.getRollingAverage(7)}
+            delta7d={tracker.getAverageDelta(7)}
+          />
+        </div>
 
+        {/* Right panel — calendar fills remaining space */}
+        <div className="flex-1 min-w-0 flex flex-col px-6 py-8 overflow-hidden">
           <CalendarView
             getDayTotals={tracker.getDayTotals}
             getDayGoalStatus={tracker.getDayGoalStatus}
             onDayClick={(dayKey) => setEditingDay(dayKey)}
             events={tracker.events}
+            goalLimit={currentGoal?.limit ?? null}
+            className="h-full"
           />
         </div>
-
-        <NewEventDrawer
-          open={drawerType !== null}
-          onOpenChange={(open) => !open && setDrawerType(null)}
-          type={drawerType}
-          onSubmit={handleSubmitEvent}
-        />
-
-        <EditDayDialog
-          open={editingDay !== null}
-          onOpenChange={(open) => !open && setEditingDay(null)}
-          dayKey={editingDay}
-          events={dayEvents}
-          onRemoveEvent={tracker.removeEvent}
-          onClearDay={tracker.clearDay}
-          onUndo={tracker.executeUndo}
-          onUpdateEvent={tracker.updateEvent}
-        />
-
-        <SettingsDrawer
-          open={settingsOpen}
-          onOpenChange={setSettingsOpen}
-          onExport={tracker.exportEvents}
-          onImport={tracker.importEvents}
-          currentGoalLimit={currentGoal?.limit ?? null}
-          onSetGoal={tracker.setGoal}
-        />
       </div>
+
+      <NewEventDrawer
+        open={drawerType !== null}
+        onOpenChange={(open) => !open && setDrawerType(null)}
+        type={drawerType}
+        onSubmit={handleSubmitEvent}
+      />
+
+      <EditDayDialog
+        open={editingDay !== null}
+        onOpenChange={(open) => !open && setEditingDay(null)}
+        dayKey={editingDay}
+        events={dayEvents}
+        onRemoveEvent={tracker.removeEvent}
+        onClearDay={tracker.clearDay}
+        onUndo={tracker.executeUndo}
+        onUpdateEvent={tracker.updateEvent}
+      />
+
+      <SettingsDrawer
+        open={settingsOpen}
+        onOpenChange={setSettingsOpen}
+        onExport={tracker.exportEvents}
+        onImport={tracker.importEvents}
+        currentGoalLimit={currentGoal?.limit ?? null}
+        onSetGoal={tracker.setGoal}
+      />
     </TooltipProvider>
   );
 };

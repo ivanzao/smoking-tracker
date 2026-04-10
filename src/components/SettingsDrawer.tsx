@@ -8,8 +8,16 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from '@/components/ui/drawer';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { ImportOutcome } from '@/hooks/useTracker';
 import { ImportError } from '@/lib/export';
 import { todayKey } from '@/lib/events';
@@ -41,6 +49,7 @@ export const SettingsDrawer = ({
 }: SettingsDrawerProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [goalInput, setGoalInput] = useState('');
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     if (open) {
@@ -100,77 +109,95 @@ export const SettingsDrawer = ({
     }
   };
 
-  return (
-    <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent>
-        <DrawerHeader>
-          <DrawerTitle>Configurações</DrawerTitle>
-          <DrawerDescription>Meta diária, backup e restauração.</DrawerDescription>
-        </DrawerHeader>
-        <div className="px-4 pb-6 space-y-6">
-          <section className="space-y-2">
-            <h3 className="text-sm font-semibold">Meta diária</h3>
-            <p className="text-xs text-muted-foreground">
-              Máx. eventos por dia (tabaco + cannabis).
-            </p>
-            <div className="flex gap-2">
-              <Input
-                type="number"
-                min={1}
-                step={1}
-                placeholder="ex: 10"
-                value={goalInput}
-                onChange={(e) => setGoalInput(e.target.value)}
-                className="flex-1"
-              />
-              <Button onClick={handleSaveGoal} disabled={!isGoalValid}>
-                Salvar
-              </Button>
-            </div>
-            {currentGoalLimit !== null && (
-              <button
-                onClick={handleRemoveGoal}
-                className="text-xs text-rose-500 hover:underline"
-              >
-                Remover meta
-              </button>
-            )}
-          </section>
-
-          <section className="space-y-2">
-            <h3 className="text-sm font-semibold">Exportar dados</h3>
-            <p className="text-xs text-muted-foreground">
-              Baixa um arquivo JSON com todos os seus eventos e metas.
-            </p>
-            <Button onClick={handleExport} className="w-full">
-              <Download className="w-4 h-4 mr-2" />
-              Exportar JSON
-            </Button>
-          </section>
-
-          <section className="space-y-2">
-            <h3 className="text-sm font-semibold">Importar dados</h3>
-            <p className="text-xs text-muted-foreground">
-              Adiciona eventos e metas de um backup. Duplicados (mesmo id) são ignorados.
-            </p>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="application/json"
-              onChange={handleFileChange}
-              className="hidden"
-            />
-            <Button
-              onClick={() => fileInputRef.current?.click()}
-              variant="outline"
-              className="w-full"
-            >
-              <Upload className="w-4 h-4 mr-2" />
-              Escolher arquivo
-            </Button>
-          </section>
+  const bodyContent = (
+    <div className="px-4 pb-6 space-y-6">
+      <section className="space-y-2">
+        <h3 className="text-sm font-semibold">Meta diária</h3>
+        <p className="text-xs text-muted-foreground">
+          Máx. eventos por dia (tabaco + cannabis).
+        </p>
+        <div className="flex gap-2">
+          <Input
+            type="number"
+            min={1}
+            step={1}
+            placeholder="ex: 10"
+            value={goalInput}
+            onChange={(e) => setGoalInput(e.target.value)}
+            className="flex-1"
+          />
+          <Button onClick={handleSaveGoal} disabled={!isGoalValid}>
+            Salvar
+          </Button>
         </div>
-      </DrawerContent>
-    </Drawer>
+        {currentGoalLimit !== null && (
+          <button
+            onClick={handleRemoveGoal}
+            className="text-xs text-rose-500 hover:underline"
+          >
+            Remover meta
+          </button>
+        )}
+      </section>
+
+      <section className="space-y-2">
+        <h3 className="text-sm font-semibold">Exportar dados</h3>
+        <p className="text-xs text-muted-foreground">
+          Baixa um arquivo JSON com todos os seus eventos e metas.
+        </p>
+        <Button onClick={handleExport} className="w-full">
+          <Download className="w-4 h-4 mr-2" />
+          Exportar JSON
+        </Button>
+      </section>
+
+      <section className="space-y-2">
+        <h3 className="text-sm font-semibold">Importar dados</h3>
+        <p className="text-xs text-muted-foreground">
+          Adiciona eventos e metas de um backup. Duplicados (mesmo id) são ignorados.
+        </p>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="application/json"
+          onChange={handleFileChange}
+          className="hidden"
+        />
+        <Button
+          onClick={() => fileInputRef.current?.click()}
+          variant="outline"
+          className="w-full"
+        >
+          <Upload className="w-4 h-4 mr-2" />
+          Escolher arquivo
+        </Button>
+      </section>
+    </div>
+  );
+
+  if (isMobile) {
+    return (
+      <Drawer open={open} onOpenChange={onOpenChange}>
+        <DrawerContent>
+          <DrawerHeader>
+            <DrawerTitle>Configurações</DrawerTitle>
+            <DrawerDescription>Meta diária, backup e restauração.</DrawerDescription>
+          </DrawerHeader>
+          {bodyContent}
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[440px]">
+        <DialogHeader>
+          <DialogTitle>Configurações</DialogTitle>
+          <DialogDescription>Meta diária, backup e restauração.</DialogDescription>
+        </DialogHeader>
+        {bodyContent}
+      </DialogContent>
+    </Dialog>
   );
 };

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { cn } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -28,9 +29,11 @@ interface CalendarViewProps {
   getDayGoalStatus: (dayKey: string) => DayGoalStatus;
   onDayClick: (dayKey: string) => void;
   events: TrackerEvent[];
+  goalLimit: number | null;
+  className?: string;
 }
 
-export const CalendarView = ({ getDayTotals, getDayGoalStatus, onDayClick, events }: CalendarViewProps) => {
+export const CalendarView = ({ getDayTotals, getDayGoalStatus, onDayClick, events, goalLimit, className }: CalendarViewProps) => {
   const today = new Date();
   const [viewMonth, setViewMonth] = useState<Date>(() => startOfMonth(new Date()));
 
@@ -107,47 +110,91 @@ export const CalendarView = ({ getDayTotals, getDayGoalStatus, onDayClick, event
     );
   };
 
-  return (
-    <Card className="p-4 sm:p-6" style={{ boxShadow: 'var(--shadow-soft)' }}>
-      <Tabs defaultValue="week" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 mb-6">
-          <TabsTrigger value="week" className="rounded-xl">Semana</TabsTrigger>
-          <TabsTrigger value="month" className="rounded-xl">Mês</TabsTrigger>
-        </TabsList>
+  const MonthNavigation = () => (
+    <div className="flex items-center justify-between">
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={goBack}
+        disabled={!canGoBack}
+        aria-label="Mês anterior"
+      >
+        <ChevronLeft className="w-5 h-5" />
+      </Button>
+      <span className="text-sm font-medium capitalize">{monthLabel}</span>
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={goForward}
+        disabled={!canGoForward}
+        aria-label="Próximo mês"
+      >
+        <ChevronRight className="w-5 h-5" />
+      </Button>
+    </div>
+  );
 
-        <TabsContent value="week" className="mt-0">
-          <div className="grid grid-cols-7 gap-1.5">
+  return (
+    <Card
+      className={cn("p-4 sm:p-6 sm:flex sm:flex-col", className)}
+      style={{ boxShadow: 'var(--shadow-soft)' }}
+    >
+      {/* Mobile: tabs (semana / mês) */}
+      <div className="sm:hidden">
+        <Tabs defaultValue="week" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 mb-6">
+            <TabsTrigger value="week" className="rounded-xl">Semana</TabsTrigger>
+            <TabsTrigger value="month" className="rounded-xl">Mês</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="week" className="mt-0">
+            <div className="grid grid-cols-7 gap-1.5">
+              {weekDays.map((d) => (
+                <DayCell key={d} dayKey={d} />
+              ))}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="month" className="mt-0">
+            <MonthNavigation />
+            <MonthlyChart dayKeys={monthDays} getDayTotals={getDayTotals} onDayClick={onDayClick} events={events} goalLimit={goalLimit} />
+          </TabsContent>
+        </Tabs>
+      </div>
+
+      {/* Desktop: semana + mês empilhados, preenchendo a altura */}
+      <div className="hidden sm:flex flex-col flex-1 min-h-0 gap-0">
+        {/* Últimos 7 dias */}
+        <div className="shrink-0">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+            Últimos 7 dias
+          </p>
+          <div className="grid grid-cols-7 gap-2">
             {weekDays.map((d) => (
               <DayCell key={d} dayKey={d} />
             ))}
           </div>
-        </TabsContent>
+        </div>
 
-        <TabsContent value="month" className="mt-0">
-          <div className="flex items-center justify-between mb-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={goBack}
-              disabled={!canGoBack}
-              aria-label="Mês anterior"
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </Button>
-            <span className="text-sm font-medium capitalize">{monthLabel}</span>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={goForward}
-              disabled={!canGoForward}
-              aria-label="Próximo mês"
-            >
-              <ChevronRight className="w-5 h-5" />
-            </Button>
+        <div className="my-5 border-t border-border shrink-0" />
+
+        {/* Gráfico mensal — preenche o restante */}
+        <div className="flex-1 min-h-0 flex flex-col">
+          <div className="shrink-0 mb-3">
+            <MonthNavigation />
           </div>
-          <MonthlyChart dayKeys={monthDays} getDayTotals={getDayTotals} onDayClick={onDayClick} events={events} />
-        </TabsContent>
-      </Tabs>
+          <div className="flex-1 min-h-0">
+            <MonthlyChart
+              dayKeys={monthDays}
+              getDayTotals={getDayTotals}
+              onDayClick={onDayClick}
+              events={events}
+              goalLimit={goalLimit}
+              className="h-full"
+            />
+          </div>
+        </div>
+      </div>
     </Card>
   );
 };

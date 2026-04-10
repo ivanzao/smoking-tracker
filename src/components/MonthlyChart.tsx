@@ -1,6 +1,6 @@
 import {
-  Bar,
   ComposedChart,
+  Legend,
   Line,
   ResponsiveContainer,
   Tooltip,
@@ -8,22 +8,21 @@ import {
   YAxis,
   CartesianGrid,
 } from 'recharts';
+import { cn } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
 import { format, parseISO } from 'date-fns';
 import { DayTotals, TrackerEvent } from '@/types';
-import { getMovingAverageSeries } from '@/lib/stats';
 
 interface MonthlyChartProps {
   dayKeys: string[];
   getDayTotals: (dayKey: string) => DayTotals;
   onDayClick: (dayKey: string) => void;
   events: TrackerEvent[];
+  goalLimit: number | null;
+  className?: string;
 }
 
-export const MonthlyChart = ({ dayKeys, getDayTotals, onDayClick, events }: MonthlyChartProps) => {
-  const movingAvg = getMovingAverageSeries(events, dayKeys, 7);
-  const avgMap = new Map(movingAvg.map((p) => [p.dayKey, p.average]));
-
+export const MonthlyChart = ({ dayKeys, getDayTotals, onDayClick, goalLimit, className }: MonthlyChartProps) => {
   const chartData = dayKeys.map((dayKey) => {
     const totals = getDayTotals(dayKey);
     return {
@@ -32,7 +31,6 @@ export const MonthlyChart = ({ dayKeys, getDayTotals, onDayClick, events }: Mont
       fullDate: format(parseISO(dayKey + 'T00:00:00'), 'dd/MM'),
       tobacco: totals.tobacco,
       cannabis: totals.cannabis,
-      avg7d: avgMap.get(dayKey) ?? 0,
     };
   });
 
@@ -42,7 +40,7 @@ export const MonthlyChart = ({ dayKeys, getDayTotals, onDayClick, events }: Mont
   };
 
   return (
-    <div className="h-[200px] w-full mt-4 mb-6" style={{ fontFamily: 'inherit' }}>
+    <div className={cn("w-full", className ?? "h-[200px] mt-4 mb-6")} style={{ fontFamily: 'inherit' }}>
       <ResponsiveContainer width="100%" height="100%">
         <ComposedChart data={chartData} onClick={handleChartClick}>
           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--muted-foreground))" opacity={0.1} />
@@ -55,7 +53,7 @@ export const MonthlyChart = ({ dayKeys, getDayTotals, onDayClick, events }: Mont
           />
           <YAxis
             allowDecimals={false}
-            domain={[0, (dataMax: number) => Math.max(1, dataMax)]}
+            domain={[0, (dataMax: number) => Math.max(goalLimit != null ? goalLimit + 3 : 1, dataMax)]}
             tickLine={false}
             axisLine={true}
             tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))', fontFamily: 'sans-serif' }}
@@ -69,7 +67,6 @@ export const MonthlyChart = ({ dayKeys, getDayTotals, onDayClick, events }: Mont
                   fullDate: string;
                   tobacco: number;
                   cannabis: number;
-                  avg7d: number;
                 };
                 return (
                   <Card className="p-2 border-none shadow-lg bg-popover/95 backdrop-blur-sm">
@@ -83,10 +80,6 @@ export const MonthlyChart = ({ dayKeys, getDayTotals, onDayClick, events }: Mont
                         <div className="w-2 h-2 rounded-full bg-primary" />
                         <span className="text-sm font-bold">{p.cannabis}</span>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                        <span className="text-sm font-bold">{p.avg7d.toFixed(1)}</span>
-                      </div>
                     </div>
                   </Card>
                 );
@@ -94,15 +87,29 @@ export const MonthlyChart = ({ dayKeys, getDayTotals, onDayClick, events }: Mont
               return null;
             }}
           />
-          <Bar dataKey="tobacco" fill="hsl(var(--secondary))" fillOpacity={0.8} radius={[4, 4, 0, 0]} />
-          <Bar dataKey="cannabis" fill="hsl(var(--primary))" fillOpacity={0.8} radius={[4, 4, 0, 0]} />
           <Line
-            dataKey="avg7d"
+            dataKey="tobacco"
+            name="Tabaco"
             type="monotone"
-            stroke="#10b981"
+            stroke="hsl(var(--secondary))"
             strokeWidth={2}
             dot={false}
             activeDot={{ r: 3 }}
+          />
+          <Line
+            dataKey="cannabis"
+            name="Cannabis"
+            type="monotone"
+            stroke="hsl(var(--primary))"
+            strokeWidth={2}
+            dot={false}
+            activeDot={{ r: 3 }}
+          />
+          <Legend
+            wrapperStyle={{ fontSize: '11px', paddingTop: '4px' }}
+            formatter={(value) => (
+              <span style={{ color: 'hsl(var(--muted-foreground))', fontFamily: 'sans-serif' }}>{value}</span>
+            )}
           />
         </ComposedChart>
       </ResponsiveContainer>
