@@ -37,17 +37,15 @@ export const CounterCard = ({ type, count, onTap }: CounterCardProps) => {
           onTap();
         }
       }}
-      className={`relative cursor-pointer border-2 transition-all duration-300 hover:scale-[1.02] ${hoverBorder} ${hoverBg}`}
+      className={`relative cursor-pointer border-2 rounded-xl transition-transform duration-150 active:scale-[0.96] ${hoverBorder} ${hoverBg}`}
       style={{ boxShadow: 'var(--shadow-soft)' }}
     >
-      <div className="p-6 sm:p-12">
-        <div className="flex flex-col items-center gap-6">
-          <div className="p-6">
-            <Icon className="w-16 h-16 text-foreground" strokeWidth={1.5} />
-          </div>
-          <div className="text-center space-y-1">
-            <div className="text-5xl font-bold text-foreground">{count}</div>
-            <div className="text-sm text-muted-foreground">{label}</div>
+      <div className="p-4 sm:p-6">
+        <div className="flex items-center justify-center gap-3">
+          <Icon className="w-7 h-7 text-foreground" strokeWidth={1.5} />
+          <div>
+            <div className="text-3xl sm:text-4xl font-bold text-foreground leading-none">{count}</div>
+            <div className="text-[0.65rem] uppercase tracking-wider text-muted-foreground">{label}</div>
           </div>
         </div>
       </div>

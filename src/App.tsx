@@ -63,7 +63,7 @@ const App = () => {
             </Button>
           </header>
 
-          <div className="grid grid-cols-2 gap-4 sm:gap-6 mb-8">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-4">
             <CounterCard
               type="tobacco"
               count={totals.tobacco}
