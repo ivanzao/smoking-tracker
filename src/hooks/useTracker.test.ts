@@ -110,6 +110,30 @@ describe('useTracker — updateEvent', () => {
     expect(result.current.events[0].reason).toBe('primeiro do dia');
     expect(result.current.events[0].type).toBe('tobacco');
   });
+
+  it('updates event type', () => {
+    const seed: TrackerEvent[] = [
+      { id: 'a', timestamp: '2026-04-08T10:00:00-03:00', type: 'tobacco' },
+    ];
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ events: seed }));
+    const { result } = renderHook(() => useTracker());
+    act(() => {
+      result.current.updateEvent('a', { type: 'cannabis' });
+    });
+    expect(result.current.events[0].type).toBe('cannabis');
+  });
+
+  it('updates event timestamp', () => {
+    const seed: TrackerEvent[] = [
+      { id: 'a', timestamp: '2026-04-08T10:00:00-03:00', type: 'tobacco' },
+    ];
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ events: seed }));
+    const { result } = renderHook(() => useTracker());
+    act(() => {
+      result.current.updateEvent('a', { timestamp: '2026-04-08T15:30:00-03:00' });
+    });
+    expect(result.current.events[0].timestamp).toBe('2026-04-08T15:30:00-03:00');
+  });
 });
 
 describe('useTracker — clearDay', () => {
