@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { format, parseISO } from 'date-fns';
 import { Cigarette, Leaf, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 import {
   Dialog,
   DialogContent,
@@ -19,6 +20,7 @@ interface EditDayDialogProps {
   events: TrackerEvent[];
   onRemoveEvent: (id: string) => void;
   onClearDay: (dayKey: string) => void;
+  onUndo: () => void;
 }
 
 export const EditDayDialog = ({
@@ -28,6 +30,7 @@ export const EditDayDialog = ({
   events,
   onRemoveEvent,
   onClearDay,
+  onUndo,
 }: EditDayDialogProps) => {
   const [confirmClear, setConfirmClear] = useState(false);
 
@@ -67,32 +70,42 @@ export const EditDayDialog = ({
         </DialogHeader>
 
         <div className="max-h-[50vh] overflow-y-auto space-y-2 py-2">
-          {sorted.map((e) => {
-            const Icon = e.type === 'tobacco' ? Cigarette : Leaf;
-            const time = format(parseISO(e.timestamp), 'HH:mm');
+          {sorted.map((ev) => {
+            const Icon = ev.type === 'tobacco' ? Cigarette : Leaf;
+            const time = format(parseISO(ev.timestamp), 'HH:mm');
             return (
               <div
-                key={e.id}
+                key={ev.id}
                 className="flex items-start gap-3 p-3 rounded-lg border bg-card"
               >
                 <Icon className="w-5 h-5 mt-0.5 shrink-0" />
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium">{time}</div>
-                  {e.location && (
+                  {ev.location && (
                     <div className="text-xs text-muted-foreground truncate">
-                      Onde: {e.location}
+                      Onde: {ev.location}
                     </div>
                   )}
-                  {e.reason && (
+                  {ev.reason && (
                     <div className="text-xs text-muted-foreground truncate">
-                      Por quê: {e.reason}
+                      Por quê: {ev.reason}
                     </div>
                   )}
                 </div>
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => onRemoveEvent(e.id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRemoveEvent(ev.id);
+                    toast('Evento removido', {
+                      duration: 5000,
+                      action: {
+                        label: 'Desfazer',
+                        onClick: () => onUndo(),
+                      },
+                    });
+                  }}
                   aria-label="Remover evento"
                 >
                   <Trash2 className="w-4 h-4" />
