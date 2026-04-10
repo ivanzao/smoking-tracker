@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Cigarette, Leaf, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import {
   format,
   parseISO,
@@ -60,12 +60,13 @@ export const CalendarView = ({ getDayTotals, getDayGoalStatus, onDayClick, event
     const isToday = dayKey === todayStr;
     const date = parseISO(dayKey + 'T00:00:00');
     const goalStatus = getDayGoalStatus(dayKey);
+    const weekday = format(date, 'EEE', { locale: ptBR }).slice(0, 3);
 
     return (
       <div
         onClick={() => onDayClick(dayKey)}
         className={`
-          relative flex flex-col items-center gap-2 p-3 rounded-2xl transition-all cursor-pointer hover:scale-105 active:scale-95
+          relative flex flex-col items-center gap-1 p-2 rounded-lg transition-transform duration-100 cursor-pointer hover:scale-105 active:scale-[0.93]
           ${isToday ? 'bg-accent ring-2 ring-primary' : 'bg-card'}
           ${total > 0 ? 'opacity-100' : 'opacity-40'}
         `}
@@ -73,35 +74,41 @@ export const CalendarView = ({ getDayTotals, getDayGoalStatus, onDayClick, event
         {goalStatus !== 'no-goal' && (
           <span
             aria-hidden
-            className={`absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full ${
+            className={`absolute top-1 right-1 w-1.5 h-1.5 rounded-full ${
               goalStatus === 'within' ? 'bg-emerald-500' : 'bg-rose-500'
             }`}
           />
         )}
-        <div className="text-xs font-medium text-muted-foreground">
-          {format(date, 'dd MMM')}
+        <div className="text-[0.55rem] font-medium text-muted-foreground capitalize">
+          {weekday}
         </div>
-        <div className="flex gap-2 items-center">
-          {totals.tobacco > 0 && (
-            <div className="flex items-center gap-1">
-              <Cigarette className="w-4 h-4 text-foreground" />
-              <span className="text-sm font-semibold text-foreground">{totals.tobacco}</span>
-            </div>
-          )}
-          {totals.cannabis > 0 && (
-            <div className="flex items-center gap-1">
-              <Leaf className="w-4 h-4 text-foreground" />
-              <span className="text-sm font-semibold text-foreground">{totals.cannabis}</span>
-            </div>
-          )}
+        <div className={`text-[0.7rem] ${isToday ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}>
+          {format(date, 'dd')}
         </div>
-        {total === 0 && <span className="text-xs text-muted-foreground">—</span>}
+        {total > 0 ? (
+          <div className="flex flex-col items-center gap-0.5">
+            {totals.tobacco > 0 && (
+              <div className="flex items-center gap-1">
+                <div className="w-[5px] h-[5px] rounded-full bg-secondary" />
+                <span className="text-[0.65rem] font-semibold">{totals.tobacco}</span>
+              </div>
+            )}
+            {totals.cannabis > 0 && (
+              <div className="flex items-center gap-1">
+                <div className="w-[5px] h-[5px] rounded-full bg-primary" />
+                <span className="text-[0.65rem] font-semibold">{totals.cannabis}</span>
+              </div>
+            )}
+          </div>
+        ) : (
+          <span className="text-[0.6rem] text-muted-foreground">—</span>
+        )}
       </div>
     );
   };
 
   return (
-    <Card className="p-6 sm:p-8" style={{ boxShadow: 'var(--shadow-soft)' }}>
+    <Card className="p-4 sm:p-6" style={{ boxShadow: 'var(--shadow-soft)' }}>
       <Tabs defaultValue="week" className="w-full">
         <TabsList className="grid w-full grid-cols-2 mb-6">
           <TabsTrigger value="week" className="rounded-xl">Semana</TabsTrigger>
@@ -109,7 +116,7 @@ export const CalendarView = ({ getDayTotals, getDayGoalStatus, onDayClick, event
         </TabsList>
 
         <TabsContent value="week" className="mt-0">
-          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-3">
+          <div className="grid grid-cols-7 gap-1.5">
             {weekDays.map((d) => (
               <DayCell key={d} dayKey={d} />
             ))}
