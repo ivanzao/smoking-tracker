@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { format, parseISO } from 'date-fns';
-import { Cigarette, Leaf, Trash2 } from 'lucide-react';
+import { Cigarette, Leaf, Trash2, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   Dialog,
@@ -80,29 +80,30 @@ export const EditDayDialog = ({
           {sorted.map((ev) => {
             const Icon = ev.type === 'tobacco' ? Cigarette : Leaf;
             const time = format(parseISO(ev.timestamp), 'HH:mm');
+            const iconBg = ev.type === 'tobacco'
+              ? 'hsl(var(--secondary) / 0.15)'
+              : 'hsl(var(--primary) / 0.15)';
+            const context = [ev.location, ev.reason].filter(Boolean).join(' · ');
+
             return (
               <div
                 key={ev.id}
                 onClick={() => setEditingEvent(ev)}
-                className="flex items-start gap-3 p-3 rounded-lg border bg-card cursor-pointer hover:bg-accent/50 transition-colors"
+                className="flex items-center gap-3 p-3.5 rounded-lg border bg-card cursor-pointer hover:bg-accent/50 active:scale-[0.98] transition-all duration-100"
               >
-                <Icon className="w-5 h-5 mt-0.5 shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium">{time}</div>
-                  {ev.location && (
-                    <div className="text-xs text-muted-foreground truncate">
-                      Onde: {ev.location}
-                    </div>
-                  )}
-                  {ev.reason && (
-                    <div className="text-xs text-muted-foreground truncate">
-                      Por quê: {ev.reason}
-                    </div>
-                  )}
+                <div
+                  className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
+                  style={{ background: iconBg }}
+                >
+                  <Icon className="w-4 h-4" />
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-semibold">{time}</div>
+                  <div className="text-xs text-muted-foreground truncate">
+                    {context || <span className="text-muted-foreground/50">sem contexto</span>}
+                  </div>
+                </div>
+                <button
                   onClick={(e) => {
                     e.stopPropagation();
                     onRemoveEvent(ev.id);
@@ -115,9 +116,11 @@ export const EditDayDialog = ({
                     });
                   }}
                   aria-label="Remover evento"
+                  className="p-2 rounded-md text-muted-foreground hover:bg-destructive/15 hover:text-destructive transition-colors"
                 >
                   <Trash2 className="w-4 h-4" />
-                </Button>
+                </button>
+                <ChevronRight className="w-4 h-4 text-muted-foreground/40 shrink-0" />
               </div>
             );
           })}
