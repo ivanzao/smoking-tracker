@@ -1,40 +1,35 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { Settings } from 'lucide-react';
 import { Toaster } from '@/components/ui/toaster';
 import { Toaster as Sonner } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { Button } from '@/components/ui/button';
-import { CounterCard } from '@/components/CounterCard';
-import { CalendarView } from '@/components/CalendarView';
-import { MetricsCard } from '@/components/MetricsCard';
+import { BottomNav } from '@/components/BottomNav';
+import { TopNav } from '@/components/TopNav';
+import { TrackerPage } from '@/pages/TrackerPage';
+import { HistoryPage } from '@/pages/HistoryPage';
+import { GoalsPage } from '@/pages/GoalsPage';
 import { NewEventDrawer } from '@/components/NewEventDrawer';
 import { EditDayDialog } from '@/components/EditDayDialog';
-import { SettingsDrawer } from '@/components/SettingsDrawer';
 import { useTracker } from '@/hooks/useTracker';
 import { EventType } from '@/types';
 
+type Tab = 'tracker' | 'history' | 'goals';
+
 const App = () => {
   const tracker = useTracker();
+  const [tab, setTab] = useState<Tab>('tracker');
   const [drawerType, setDrawerType] = useState<EventType | null>(null);
   const [editingDay, setEditingDay] = useState<string | null>(null);
-  const [settingsOpen, setSettingsOpen] = useState(false);
-
-  const totals = tracker.getTodayTotals();
-  const currentGoal = tracker.getCurrentGoal();
 
   const handleSubmitEvent = (input: { type: EventType; location?: string; reason?: string }) => {
     tracker.addEvent(input);
-    toast.success(
-      `+1 ${input.type === 'tobacco' ? 'tabaco' : 'cannabis'}`,
-      {
-        duration: 5000,
-        action: {
-          label: 'Desfazer',
-          onClick: () => tracker.executeUndo(),
-        },
-      }
-    );
+    toast.success(`+1 ${input.type === 'tobacco' ? 'tabaco' : 'cannabis'}`, {
+      duration: 5000,
+      action: {
+        label: 'Desfazer',
+        onClick: () => tracker.executeUndo(),
+      },
+    });
   };
 
   const dayEvents = editingDay ? tracker.getEventsForDay(editingDay) : [];
@@ -44,94 +39,49 @@ const App = () => {
       <Toaster />
       <Sonner />
 
-      {/* Mobile layout: single column, scrollable */}
-      <div className="sm:hidden min-h-screen bg-background px-4 py-6">
-        <header className="flex items-start justify-between mb-5">
-          <div>
-            <h1 className="text-xl font-bold text-foreground tracking-tight">Smoking Tracker</h1>
-            <p className="text-xs text-muted-foreground">do but don't forget</p>
-          </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setSettingsOpen(true)}
-            aria-label="Configurações"
-            className="p-2 shrink-0"
-          >
-            <Settings className="w-5 h-5" />
-          </Button>
-        </header>
+      {/* Mobile header */}
+      <header className="md:hidden fixed top-0 w-full z-50 bg-background flex justify-between items-center px-6 h-16 border-b border-outline-variant/10">
+        <span className="text-primary font-black tracking-tighter text-xl">Smoking Tracker</span>
+        <button
+          onClick={() => setTab('goals')}
+          aria-label="Configurações"
+          className="p-2 text-on-surface-variant hover:bg-surface-container-high rounded-full transition-colors active:scale-95"
+        >
+          <span className="material-symbols-outlined">settings</span>
+        </button>
+      </header>
 
-        <div className="grid grid-cols-2 gap-3 mb-4">
-          <CounterCard type="tobacco" count={totals.tobacco} onTap={() => setDrawerType('tobacco')} />
-          <CounterCard type="cannabis" count={totals.cannabis} onTap={() => setDrawerType('cannabis')} />
-        </div>
+      {/* Desktop nav + sidebar */}
+      <TopNav
+        tab={tab}
+        onChange={setTab}
+        tracker={tracker}
+        onOpenNewEvent={(type) => setDrawerType(type)}
+      />
 
-        <div className="mb-4">
-          <MetricsCard
-            todayTotal={totals.tobacco + totals.cannabis}
-            goalLimit={currentGoal?.limit ?? null}
-            streak={tracker.getCurrentStreak()}
-            average7d={tracker.getRollingAverage(7)}
-            delta7d={tracker.getAverageDelta(7)}
-          />
-        </div>
-
-        <CalendarView
-          getDayTotals={tracker.getDayTotals}
-          getDayGoalStatus={tracker.getDayGoalStatus}
-          onDayClick={(dayKey) => setEditingDay(dayKey)}
-          events={tracker.events}
-          goalLimit={currentGoal?.limit ?? null}
+      {/* Page content */}
+      {tab === 'tracker' && (
+        <TrackerPage
+          tracker={tracker}
+          onOpenNewEvent={(type) => setDrawerType(type)}
         />
-      </div>
+      )}
+      {tab === 'history' && (
+        <HistoryPage
+          tracker={tracker}
+          onOpenEditDay={(dayKey) => setEditingDay(dayKey)}
+        />
+      )}
+      {tab === 'goals' && (
+        <GoalsPage tracker={tracker} />
+      )}
 
-      {/* Desktop layout: two-panel, full viewport */}
-      <div className="hidden sm:flex h-screen overflow-hidden bg-background">
-        {/* Left panel — fixed width, no content stretching */}
-        <div className="w-80 shrink-0 flex flex-col gap-4 px-6 py-8 border-r border-border overflow-y-auto">
-          <header className="flex items-start justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-foreground tracking-tight">Smoking Tracker</h1>
-              <p className="text-xs text-muted-foreground">do but don't forget</p>
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setSettingsOpen(true)}
-              aria-label="Configurações"
-              className="p-2 shrink-0"
-            >
-              <Settings className="w-5 h-5" />
-            </Button>
-          </header>
+      {/* Desktop main content area (for history and goals on desktop) */}
+      {tab !== 'tracker' && (
+        <div className="hidden md:block" />
+      )}
 
-          <div className="grid grid-cols-2 gap-3">
-            <CounterCard type="tobacco" count={totals.tobacco} onTap={() => setDrawerType('tobacco')} />
-            <CounterCard type="cannabis" count={totals.cannabis} onTap={() => setDrawerType('cannabis')} />
-          </div>
-
-          <MetricsCard
-            todayTotal={totals.tobacco + totals.cannabis}
-            goalLimit={currentGoal?.limit ?? null}
-            streak={tracker.getCurrentStreak()}
-            average7d={tracker.getRollingAverage(7)}
-            delta7d={tracker.getAverageDelta(7)}
-          />
-        </div>
-
-        {/* Right panel — calendar fills remaining space */}
-        <div className="flex-1 min-w-0 flex flex-col px-6 py-8 overflow-hidden">
-          <CalendarView
-            getDayTotals={tracker.getDayTotals}
-            getDayGoalStatus={tracker.getDayGoalStatus}
-            onDayClick={(dayKey) => setEditingDay(dayKey)}
-            events={tracker.events}
-            goalLimit={currentGoal?.limit ?? null}
-            className="h-full"
-          />
-        </div>
-      </div>
+      <BottomNav tab={tab} onChange={setTab} />
 
       <NewEventDrawer
         open={drawerType !== null}
@@ -149,15 +99,6 @@ const App = () => {
         onClearDay={tracker.clearDay}
         onUndo={tracker.executeUndo}
         onUpdateEvent={tracker.updateEvent}
-      />
-
-      <SettingsDrawer
-        open={settingsOpen}
-        onOpenChange={setSettingsOpen}
-        onExport={tracker.exportEvents}
-        onImport={tracker.importEvents}
-        currentGoalLimit={currentGoal?.limit ?? null}
-        onSetGoal={tracker.setGoal}
       />
     </TooltipProvider>
   );
