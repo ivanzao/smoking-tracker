@@ -2,96 +2,52 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
-
 @layer base {
   :root {
-    --background: 210 40% 98%;
-    --foreground: 215 25% 27%;
+    /* Core surface palette */
+    --background:                0 0% 7%;
+    --foreground:               20 6% 89%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 215 25% 27%;
+    --card:                      0 2% 11%;
+    --card-foreground:          20 6% 89%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 215 25% 27%;
+    --popover:                   0 0% 16%;
+    --popover-foreground:       20 6% 89%;
 
-    --primary: 131 65% 44%;
-    --primary-foreground: 0 0% 100%;
+    /* Brand colors */
+    --primary:                 141 100% 73%;
+    --primary-foreground:      148 100% 11%;
 
-    --secondary: 23 65% 44%;
-    --secondary-foreground: 0 0% 100%;
+    --secondary:                17 100% 81%;
+    --secondary-foreground:     14 100% 18%;
 
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
+    /* Surface containers (tonal depth) */
+    --surface-container-lowest:  0 0% 5%;
+    --surface-container-low:     0 2% 11%;
+    --surface-container:         0 2% 12%;
+    --surface-container-high:    0 0% 16%;
+    --surface-container-highest: 60 1% 21%;
 
-    --accent: 131 65% 96%;
-    --accent-foreground: 131 65% 36%;
+    /* On-surface text */
+    --on-surface:               20 6% 89%;
+    --on-surface-variant:      118 13% 76%;
+    --on-primary:              148 100% 11%;
 
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
+    /* Borders (outline only — no structural borders) */
+    --outline-variant:         126 11% 26%;
+    --border:                  126 11% 26%;
+    --input:                     0 0% 16%;
+    --ring:                    141 100% 73%;
 
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 131 65% 44%;
+    /* Utility */
+    --muted:                     0 2% 12%;
+    --muted-foreground:        118 13% 76%;
+    --accent:                    0 0% 16%;
+    --accent-foreground:        20 6% 89%;
+    --destructive:               5 100% 84%;
+    --destructive-foreground:  357 100% 21%;
 
-    --radius: 1rem;
-
-    --gradient-leaf: linear-gradient(135deg, hsl(131 65% 44%), hsl(131 55% 54%));
-    --gradient-cigarette: linear-gradient(135deg, hsl(23 65% 44%), hsl(23 55% 54%));
-    --shadow-soft: 0 4px 20px -4px hsl(215 25% 27% / 0.08);
-    --shadow-hover: 0 8px 30px -6px hsl(215 25% 27% / 0.12);
-    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-
-    --sidebar-background: 0 0% 98%;
-
-    --sidebar-foreground: 240 5.3% 26.1%;
-
-    --sidebar-primary: 240 5.9% 10%;
-
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
-  }
-
-  .dark {
-    --background: 0 0% 17%;
-    --foreground: 210 40% 98%;
-
-    --card: 0 0% 20%;
-    --card-foreground: 0 0% 98%;
-
-    --popover: 0 0% 20%;
-    --popover-foreground: 0 0% 98%;
-
-    --primary: 162 73% 46%;
-    --primary-foreground: 0 0% 100%;
-
-    --secondary: 15 86% 68%;
-    --secondary-foreground: 0 0% 100%;
-
-    --muted: 0 0% 24%;
-    --muted-foreground: 0 0% 65%;
-
-    --accent: 0 0% 28%;
-    --accent-foreground: 0 0% 85%;
-
-    --destructive: 0 62% 31%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 0 0% 27%;
-    --input: 0 0% 27%;
-    --ring: 0 0% 40%;
-
-    --shadow-soft: 0 4px 20px -4px hsl(0 0% 0% / 0.2);
-    --shadow-hover: 0 8px 30px -6px hsl(0 0% 0% / 0.3);
+    --radius: 0.5rem;
   }
 }
 
@@ -111,9 +67,10 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
+    font-family: 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
   }
 
-  /* Remove number input arrows/spinners */
   input[type=number]::-webkit-inner-spin-button,
   input[type=number]::-webkit-outer-spin-button {
     -webkit-appearance: none;
@@ -123,4 +80,25 @@ All colors MUST be HSL.
   input[type=number] {
     -moz-appearance: textfield;
   }
+}
+
+/* Material Symbols */
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  font-family: 'Material Symbols Outlined';
+  font-style: normal;
+  font-weight: normal;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+.material-symbols-filled {
+  font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }

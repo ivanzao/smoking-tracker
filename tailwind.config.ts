@@ -47,14 +47,15 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        leaf: {
-          DEFAULT: "hsl(162 73% 46%)",
-          light: "hsl(162 63% 56%)",
-        },
-        cigarette: {
-          DEFAULT: "hsl(15 86% 68%)",
-          dark: "hsl(15 76% 58%)",
-        },
+        'surface-container-lowest': 'hsl(var(--surface-container-lowest))',
+        'surface-container-low':    'hsl(var(--surface-container-low))',
+        'surface-container':        'hsl(var(--surface-container))',
+        'surface-container-high':   'hsl(var(--surface-container-high))',
+        'surface-container-highest':'hsl(var(--surface-container-highest))',
+        'on-surface':               'hsl(var(--on-surface))',
+        'on-surface-variant':       'hsl(var(--on-surface-variant))',
+        'on-primary':               'hsl(var(--on-primary))',
+        'outline-variant':          'hsl(var(--outline-variant))',
       },
       borderRadius: {
         lg: "var(--radius)",
