@@ -1,5 +1,3 @@
-import { Cigarette, Leaf } from 'lucide-react';
-import { Card } from '@/components/ui/card';
 import { EventType } from '@/types';
 
 interface CounterCardProps {
@@ -8,47 +6,36 @@ interface CounterCardProps {
   onTap: () => void;
 }
 
-const META: Record<EventType, { label: string; icon: typeof Cigarette; hoverBorder: string; hoverBg: string }> = {
+const META: Record<EventType, { label: string; icon: string; colorClass: string; hoverBorder: string }> = {
   tobacco: {
     label: 'Tabaco',
-    icon: Cigarette,
-    hoverBorder: 'hover:border-secondary',
-    hoverBg: 'hover:bg-secondary/5',
+    icon: 'smoke_free',
+    colorClass: 'text-secondary',
+    hoverBorder: 'hover:border-secondary/30',
   },
   cannabis: {
     label: 'Cannabis',
-    icon: Leaf,
-    hoverBorder: 'hover:border-primary',
-    hoverBg: 'hover:bg-primary/5',
+    icon: 'potted_plant',
+    colorClass: 'text-primary',
+    hoverBorder: 'hover:border-primary/30',
   },
 };
 
 export const CounterCard = ({ type, count, onTap }: CounterCardProps) => {
-  const { label, icon: Icon, hoverBorder, hoverBg } = META[type];
+  const { label, icon, colorClass, hoverBorder } = META[type];
 
   return (
-    <Card
-      role="button"
-      tabIndex={0}
+    <button
       onClick={onTap}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          onTap();
-        }
-      }}
-      className={`relative cursor-pointer border-2 rounded-xl transition-transform duration-150 active:scale-[0.96] ${hoverBorder} ${hoverBg}`}
-      style={{ boxShadow: 'var(--shadow-soft)' }}
+      className={`flex flex-col items-center justify-center gap-3 bg-surface-container-high p-6 rounded-2xl border border-transparent ${hoverBorder} transition-all active:scale-95 group`}
     >
-      <div className="p-4 sm:p-6">
-        <div className="flex items-center justify-center gap-3">
-          <Icon className="w-7 h-7 text-foreground" strokeWidth={1.5} />
-          <div>
-            <div className="text-3xl sm:text-4xl font-bold text-foreground leading-none">{count}</div>
-            <div className="text-[0.65rem] uppercase tracking-wider text-muted-foreground">{label}</div>
-          </div>
-        </div>
+      <span className={`material-symbols-outlined text-4xl group-hover:scale-110 transition-transform ${colorClass}`}>
+        {icon}
+      </span>
+      <div className="flex flex-col items-center gap-0.5">
+        <span className="text-2xl font-bold text-on-surface">{count}</span>
+        <span className="text-[10px] font-bold tracking-widest text-on-surface-variant uppercase">{label}</span>
       </div>
-    </Card>
+    </button>
   );
 };
