@@ -72,7 +72,7 @@ export const GoalsPage = ({ tracker }: GoalsPageProps) => {
   };
 
   return (
-    <main className="flex-1 px-6 pt-24 pb-32 overflow-y-auto max-w-lg mx-auto md:pt-8 md:ml-80">
+    <main className="flex-1 px-6 pt-24 pb-32 overflow-y-auto max-w-lg mx-auto md:pt-24 md:ml-80">
       {/* Goal section */}
       <section className="mb-10">
         <h2 className="text-[10px] font-medium text-on-surface-variant uppercase tracking-[0.2em] mb-4">

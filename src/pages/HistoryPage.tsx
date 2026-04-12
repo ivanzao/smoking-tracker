@@ -45,7 +45,7 @@ export const HistoryPage = ({ tracker, onOpenEditDay }: HistoryPageProps) => {
   const todayStr = todayKey();
 
   return (
-    <main className="flex-1 px-6 pt-24 pb-32 overflow-y-auto md:pt-8 md:pl-8 md:pr-8 md:ml-80">
+    <main className="flex-1 px-6 pt-24 pb-32 overflow-y-auto md:pt-24 md:pl-8 md:pr-8 md:ml-80">
       {/* Hero stat */}
       <section className="mb-8">
         <div className="flex items-end gap-2 mb-1">
