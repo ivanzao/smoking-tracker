@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { GoalsPage } from './GoalsPage';
+import { GoalsContent } from '@/components/GoalsContent';
 import type { UseTrackerAPI } from '@/hooks/useTracker';
 
 function makeTracker(overrides: Partial<UseTrackerAPI> = {}): UseTrackerAPI {
@@ -28,14 +28,14 @@ function makeTracker(overrides: Partial<UseTrackerAPI> = {}): UseTrackerAPI {
   } as UseTrackerAPI;
 }
 
-describe('GoalsPage', () => {
+describe('GoalsContent', () => {
   it('calls setGoal with the slider value when save is clicked', () => {
     const setGoal = vi.fn();
     const tracker = makeTracker({
       setGoal,
       getCurrentGoal: vi.fn(() => ({ id: '1', limit: 5, effectiveFrom: '2024-01-01' })),
     });
-    render(<GoalsPage tracker={tracker} />);
+    render(<GoalsContent tracker={tracker} />);
     const slider = screen.getByRole('slider');
     fireEvent.change(slider, { target: { value: '10' } });
     fireEvent.click(screen.getByRole('button', { name: /salvar meta/i }));
@@ -46,17 +46,16 @@ describe('GoalsPage', () => {
     const tracker = makeTracker({
       getCurrentGoal: vi.fn(() => ({ id: '1', limit: 7, effectiveFrom: '2024-01-01' })),
     });
-    render(<GoalsPage tracker={tracker} />);
+    render(<GoalsContent tracker={tracker} />);
     expect(screen.getByRole('slider')).toHaveValue('7');
   });
 
   it('calls exportEvents and triggers download when export button clicked', () => {
     const exportEvents = vi.fn(() => '{"events":[]}');
     const tracker = makeTracker({ exportEvents });
-    // Mock URL.createObjectURL
     global.URL.createObjectURL = vi.fn(() => 'blob:mock');
     global.URL.revokeObjectURL = vi.fn();
-    render(<GoalsPage tracker={tracker} />);
+    render(<GoalsContent tracker={tracker} />);
     fireEvent.click(screen.getByRole('button', { name: /exportar json/i }));
     expect(exportEvents).toHaveBeenCalled();
   });

@@ -119,6 +119,7 @@ export const GoalsContent = ({ tracker }: GoalsContentProps) => {
             {currentGoal && (
               <button
                 onClick={handleRemoveGoal}
+                aria-label="Remover meta"
                 className="text-xs text-destructive hover:underline px-2"
               >
                 Remover
