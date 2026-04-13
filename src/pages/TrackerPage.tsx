@@ -203,12 +203,18 @@ export const TrackerPage = ({ tracker, onOpenNewEvent }: TrackerPageProps) => {
                           </span>
                         </div>
                         <div>
-                          <p className="text-sm font-bold text-on-surface">
-                            {isCannabis ? 'Cannabis' : 'Tabaco'}
-                          </p>
                           <p className="text-[11px] text-on-surface-variant uppercase tracking-wider">
                             {format(parseISO(event.timestamp), 'HH:mm', { locale: ptBR })}
                           </p>
+                          <p className="text-sm font-bold text-on-surface">
+                            {isCannabis ? 'Cannabis' : 'Tabaco'}
+                          </p>
+                          {event.location && (
+                            <p className="text-[11px] text-on-surface-variant">{event.location}</p>
+                          )}
+                          {event.reason && (
+                            <p className="text-[11px] text-on-surface-variant">{event.reason}</p>
+                          )}
                         </div>
                       </div>
                     );

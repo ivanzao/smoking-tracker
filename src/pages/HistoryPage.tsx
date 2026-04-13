@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { format, parseISO, startOfMonth, endOfMonth, subDays, addMonths, subMonths } from 'date-fns';
+import { format, startOfMonth, endOfMonth, subDays, addMonths, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { UseTrackerAPI } from '@/hooks/useTracker';
 import { getDaysInRange, getEarliestEventMonth, getMonthKey, todayKey } from '@/lib/events';
@@ -37,10 +37,6 @@ export const HistoryPage = ({ tracker, onOpenEditDay }: HistoryPageProps) => {
     const t = tracker.getDayTotals(d);
     return sum + t.tobacco + t.cannabis;
   }, 0);
-
-  const recentEvents = [...tracker.events]
-    .sort((a, b) => (a.timestamp > b.timestamp ? -1 : 1))
-    .slice(0, 5);
 
   const todayStr = todayKey();
 
@@ -148,62 +144,6 @@ export const HistoryPage = ({ tracker, onOpenEditDay }: HistoryPageProps) => {
         </div>
       </section>
 
-      {/* Recent logs */}
-      {recentEvents.length > 0 && (
-        <section className="mb-8">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-[10px] font-black text-on-surface-variant uppercase tracking-[0.1em]">
-              Últimos Registros
-            </h2>
-          </div>
-          <div className="space-y-3">
-            {recentEvents.map((event) => {
-              const isCannabis = event.type === 'cannabis';
-              const label = format(
-                parseISO(event.timestamp),
-                "dd/MM 'às' HH:mm",
-                { locale: ptBR }
-              );
-              return (
-                <div
-                  key={event.id}
-                  className="bg-surface-container-low p-4 rounded-xl flex items-center justify-between group"
-                >
-                  <div className="flex items-center gap-4">
-                    <div
-                      className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                        isCannabis ? 'bg-primary/10 text-primary' : 'bg-secondary/10 text-secondary'
-                      }`}
-                    >
-                      <span className="material-symbols-outlined">
-                        {isCannabis ? 'eco' : 'smoking_rooms'}
-                      </span>
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-on-surface">
-                        {isCannabis ? 'Cannabis' : 'Tabaco'}
-                      </p>
-                      <p className="text-[11px] text-on-surface-variant uppercase tracking-wider">
-                        {label}
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => {
-                      const dayKey = event.timestamp.slice(0, 10);
-                      onOpenEditDay(dayKey);
-                    }}
-                    aria-label="Editar"
-                    className="w-8 h-8 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container-highest transition-all active:scale-90"
-                  >
-                    <span className="material-symbols-outlined text-lg">edit</span>
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-      )}
     </main>
   );
 };
