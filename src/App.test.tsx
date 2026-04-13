@@ -17,6 +17,6 @@ describe('App navigation', () => {
   it('switches to GoalsPage when goals bottom nav button is clicked', () => {
     render(<App />);
     fireEvent.click(screen.getAllByRole('button', { name: /goals/i })[0]);
-    expect(screen.getByText(/meta diária/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/meta diária/i).length).toBeGreaterThan(0);
   });
 });

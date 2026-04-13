@@ -1,5 +1,6 @@
 import { EventType } from '@/types';
 import { UseTrackerAPI } from '@/hooks/useTracker';
+import { GoalsContent } from '@/components/GoalsContent';
 
 type Tab = 'tracker' | 'history' | 'goals';
 
@@ -13,7 +14,6 @@ interface TopNavProps {
 const NAV_TABS: { id: Tab; label: string }[] = [
   { id: 'tracker', label: 'Tracker' },
   { id: 'history', label: 'History' },
-  { id: 'goals',   label: 'Goals'   },
 ];
 
 export const TopNav = ({ tab, onChange, tracker, onOpenNewEvent }: TopNavProps) => {
@@ -43,13 +43,8 @@ export const TopNav = ({ tab, onChange, tracker, onOpenNewEvent }: TopNavProps) 
             </button>
           ))}
         </nav>
-        <button
-          onClick={() => onChange('goals')}
-          aria-label="Configurações"
-          className="p-2 text-primary hover:bg-surface-container-high transition-colors rounded-full active:scale-95"
-        >
-          <span className="material-symbols-outlined">settings</span>
-        </button>
+        {/* spacer to balance the logo */}
+        <div className="w-10" />
       </header>
 
       {/* Fixed sidebar — desktop only */}
@@ -91,9 +86,7 @@ export const TopNav = ({ tab, onChange, tracker, onOpenNewEvent }: TopNavProps) 
             <p className="text-[10px] font-medium text-on-surface-variant uppercase tracking-[0.1em]">
               Streak Atual
             </p>
-            <span
-              className="material-symbols-outlined text-primary material-symbols-filled"
-            >
+            <span className="material-symbols-outlined text-primary material-symbols-filled">
               bolt
             </span>
           </div>
@@ -126,6 +119,11 @@ export const TopNav = ({ tab, onChange, tracker, onOpenNewEvent }: TopNavProps) 
               </p>
             )}
           </div>
+        </div>
+
+        {/* Goals section */}
+        <div className="border-t border-outline-variant/10 pt-8">
+          <GoalsContent tracker={tracker} />
         </div>
       </aside>
     </>
