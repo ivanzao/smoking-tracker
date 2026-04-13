@@ -25,7 +25,8 @@ export const TrackerPage = ({ tracker, onOpenNewEvent }: TrackerPageProps) => {
 
   // Desktop: today + 2 previous days, skip days with no events
   const todayStr = todayKey();
-  const recentDays = [todayStr, format(subDays(today, 1), 'yyyy-MM-dd'), format(subDays(today, 2), 'yyyy-MM-dd')];
+  const todayNoon = parseISO(todayStr + 'T12:00:00');
+  const recentDays = [todayStr, format(subDays(todayNoon, 1), 'yyyy-MM-dd'), format(subDays(todayNoon, 2), 'yyyy-MM-dd')];
   const recentGroups = recentDays
     .map((dayKey, idx) => {
       const events = tracker
