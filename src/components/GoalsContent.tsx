@@ -93,12 +93,6 @@ export const GoalsContent = ({ tracker }: GoalsContentProps) => {
               {String(goalValue).padStart(2, '0')}
             </span>
           </div>
-          <div className="h-1 bg-surface-container-highest rounded-full overflow-hidden mb-4">
-            <div
-              className="h-full bg-primary rounded-full"
-              style={{ width: `${(goalValue / 20) * 100}%` }}
-            />
-          </div>
           <input
             type="range"
             min={1}

@@ -80,44 +80,34 @@ export const TopNav = ({ tab, onChange, tracker, onOpenNewEvent }: TopNavProps) 
           </div>
         </div>
 
-        {/* Streak card */}
-        <div className="bg-surface-container-low p-6 rounded-xl space-y-4">
-          <div className="flex justify-between items-start">
-            <p className="text-[10px] font-medium text-on-surface-variant uppercase tracking-[0.1em]">
-              Streak Atual
+        {/* Streak + Consumo */}
+        <div className="bg-surface-container-low p-5 rounded-xl flex gap-4">
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] font-medium text-on-surface-variant uppercase tracking-[0.1em] mb-2">
+              Streak
             </p>
-            <span className="material-symbols-outlined text-primary material-symbols-filled">
-              bolt
-            </span>
-          </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-5xl font-black tracking-tight text-on-surface">
-              {currentGoal ? streak : '—'}
-            </span>
-            <span className="text-on-surface-variant font-medium text-sm uppercase tracking-widest">
-              dias
-            </span>
-          </div>
-          {currentGoal && streak === 0 && (
-            <p className="text-xs text-on-surface-variant">Sem dias consecutivos ainda</p>
-          )}
-        </div>
-
-        {/* Quick stats */}
-        <div className="space-y-3">
-          <h3 className="text-[10px] font-bold text-on-surface-variant uppercase tracking-[0.1em]">
-            Hoje
-          </h3>
-          <div className="bg-surface-container p-4 rounded-xl flex items-center justify-between">
-            <div>
-              <p className="text-[10px] uppercase tracking-wider text-on-surface-variant">Consumo</p>
-              <p className="text-lg font-bold text-primary">{todayTotal}</p>
+            <div className="flex items-baseline gap-1">
+              <span className="text-3xl font-black tracking-tight text-on-surface">
+                {currentGoal ? streak : '—'}
+              </span>
+              <span className="text-on-surface-variant font-medium text-xs uppercase tracking-widest">
+                dias
+              </span>
             </div>
-            {currentGoal && (
-              <p className="text-on-surface-variant text-sm font-medium">
-                / {currentGoal.limit}
-              </p>
-            )}
+          </div>
+          <div className="w-px bg-outline-variant/20 self-stretch" />
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] uppercase tracking-wider text-on-surface-variant mb-2">
+              Hoje
+            </p>
+            <div className="flex items-baseline gap-1">
+              <span className="text-3xl font-black text-primary">{todayTotal}</span>
+              {currentGoal && (
+                <span className="text-on-surface-variant text-sm font-medium">
+                  / {currentGoal.limit}
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
