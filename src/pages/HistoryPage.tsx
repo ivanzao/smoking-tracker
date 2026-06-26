@@ -45,14 +45,14 @@ export const HistoryPage = ({ tracker, onOpenEditDay }: HistoryPageProps) => {
       {/* Hero stat */}
       <section className="mb-8">
         <div className="flex items-end gap-2 mb-1">
-          <span className="text-[3.5rem] font-bold tracking-tighter text-on-surface leading-none">
+          <span className="text-[3.5rem] font-bold tracking-tight leading-none">
             {currentGoal ? streak : '—'}
           </span>
-          <span className="text-xs font-medium uppercase tracking-[0.1em] text-on-surface-variant mb-2">
+          <span className="text-xs font-bold uppercase tracking-wider mb-2">
             {currentGoal ? 'dias na meta' : 'sem meta'}
           </span>
         </div>
-        <p className="text-sm text-on-surface-variant">
+        <p className="text-sm text-muted-foreground">
           {!currentGoal
             ? 'Defina uma meta em Goals para acompanhar seu progresso.'
             : streak === 0
@@ -63,20 +63,16 @@ export const HistoryPage = ({ tracker, onOpenEditDay }: HistoryPageProps) => {
 
       {/* Weekly bento */}
       <div className="grid grid-cols-2 gap-4 mb-8">
-        <div className="bg-surface-container-low p-5 rounded-xl">
-          <span className="text-[10px] font-medium text-on-surface-variant uppercase tracking-[0.1em] block mb-4">
+        <div className="bg-card border-2 border-border shadow-brutal p-5">
+          <span className="text-xs font-bold uppercase tracking-wider block mb-4">
             Esta semana
           </span>
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-primary">{weekTotal}</span>
-            <span className="text-xs text-on-surface-variant">unidades</span>
+            <span className="text-2xl font-bold">{weekTotal}</span>
+            <span className="text-xs text-muted-foreground">unidades</span>
           </div>
           {delta7d !== null && (
-            <div
-              className={`mt-2 flex items-center gap-1 text-[10px] ${
-                delta7d <= 0 ? 'text-primary' : 'text-secondary'
-              }`}
-            >
+            <div className="mt-2 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider">
               <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>
                 {delta7d <= 0 ? 'trending_down' : 'trending_up'}
               </span>
@@ -84,19 +80,19 @@ export const HistoryPage = ({ tracker, onOpenEditDay }: HistoryPageProps) => {
             </div>
           )}
         </div>
-        <div className="bg-surface-container-low p-5 rounded-xl">
-          <span className="text-[10px] font-medium text-on-surface-variant uppercase tracking-[0.1em] block mb-4">
+        <div className="bg-card border-2 border-border shadow-brutal p-5">
+          <span className="text-xs font-bold uppercase tracking-wider block mb-4">
             Média 7d
           </span>
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-secondary">{avg7d.toFixed(1)}</span>
-            <span className="text-xs text-on-surface-variant">por dia</span>
+            <span className="text-2xl font-bold">{avg7d.toFixed(1)}</span>
+            <span className="text-xs text-muted-foreground">por dia</span>
           </div>
         </div>
       </div>
 
       {/* Monthly chart */}
-      <section className="mb-8 bg-surface-container-low rounded-xl p-6">
+      <section className="mb-8 bg-card border-2 border-border shadow-brutal p-6">
         <div className="mb-4">
           <MonthNavigation
             label={monthLabel}
@@ -118,13 +114,13 @@ export const HistoryPage = ({ tracker, onOpenEditDay }: HistoryPageProps) => {
 
       {/* Calendar grid */}
       <section className="mb-8">
-        <h2 className="text-[10px] font-black text-on-surface-variant uppercase tracking-[0.1em] mb-4">
+        <h2 className="text-xs font-bold uppercase tracking-wider mb-4">
           Calendário
         </h2>
-        <div className="bg-surface-container p-4 rounded-2xl">
+        <div className="bg-card border-2 border-border shadow-brutal p-4">
           <div className="grid grid-cols-7 gap-2 mb-2">
             {WEEK_HEADER.map((d, i) => (
-              <span key={i} className="text-[10px] text-center font-bold text-on-surface-variant uppercase">
+              <span key={i} className="text-[10px] text-center font-bold uppercase tracking-wider">
                 {d}
               </span>
             ))}
