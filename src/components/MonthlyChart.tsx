@@ -1,7 +1,8 @@
 import {
+  Bar,
   ComposedChart,
   Legend,
-  Line,
+  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -9,7 +10,6 @@ import {
   CartesianGrid,
 } from 'recharts';
 import { cn } from '@/lib/utils';
-import { Card } from '@/components/ui/card';
 import { format, parseISO } from 'date-fns';
 import { DayTotals, TrackerEvent } from '@/types';
 
@@ -31,6 +31,7 @@ export const MonthlyChart = ({ dayKeys, getDayTotals, onDayClick, goalLimit, cla
       fullDate: format(parseISO(dayKey + 'T00:00:00'), 'dd/MM'),
       tobacco: totals.tobacco,
       cannabis: totals.cannabis,
+      total: totals.tobacco + totals.cannabis,
     };
   });
 
@@ -43,24 +44,24 @@ export const MonthlyChart = ({ dayKeys, getDayTotals, onDayClick, goalLimit, cla
     <div className={cn("w-full", className ?? "h-[200px] mt-4 mb-6")} style={{ fontFamily: 'inherit' }}>
       <ResponsiveContainer width="100%" height="100%">
         <ComposedChart data={chartData} onClick={handleChartClick}>
-          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--muted-foreground))" opacity={0.1} />
+          <CartesianGrid strokeDasharray="2 4" vertical={false} stroke="hsl(var(--foreground))" opacity={0.15} />
           <XAxis
             dataKey="day"
             tickLine={false}
-            axisLine={true}
-            tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))', fontFamily: 'sans-serif' }}
+            axisLine={{ stroke: 'hsl(var(--foreground))' }}
+            tick={{ fontSize: 12, fill: 'hsl(var(--foreground))', fontFamily: 'inherit', fontWeight: 600 }}
             interval={0}
           />
           <YAxis
             allowDecimals={false}
             domain={[0, (dataMax: number) => Math.max(goalLimit != null ? goalLimit + 3 : 1, dataMax)]}
             tickLine={false}
-            axisLine={true}
-            tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))', fontFamily: 'sans-serif' }}
+            axisLine={{ stroke: 'hsl(var(--foreground))' }}
+            tick={{ fontSize: 12, fill: 'hsl(var(--foreground))', fontFamily: 'inherit', fontWeight: 600 }}
             width={20}
           />
           <Tooltip
-            cursor={{ fill: 'var(--accent)', opacity: 0.2 }}
+            cursor={{ fill: 'hsl(var(--primary))', opacity: 0.2 }}
             content={({ active, payload }) => {
               if (active && payload && payload.length) {
                 const p = payload[0].payload as {
@@ -69,46 +70,31 @@ export const MonthlyChart = ({ dayKeys, getDayTotals, onDayClick, goalLimit, cla
                   cannabis: number;
                 };
                 return (
-                  <Card className="p-2 border-none shadow-lg bg-popover/95 backdrop-blur-sm">
-                    <div className="text-xs font-medium text-muted-foreground mb-1">{p.fullDate}</div>
-                    <div className="flex gap-3">
-                      <div className="flex items-center gap-1">
-                        <div className="w-2 h-2 rounded-full bg-secondary" />
-                        <span className="text-sm font-bold">{p.tobacco}</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <div className="w-2 h-2 rounded-full bg-primary" />
-                        <span className="text-sm font-bold">{p.cannabis}</span>
-                      </div>
+                  <div className="bg-card text-foreground border-2 border-border shadow-brutal p-2">
+                    <div className="text-xs font-bold uppercase tracking-wider mb-1">{p.fullDate}</div>
+                    <div className="flex gap-3 text-sm font-bold">
+                      <span>T: {p.tobacco}</span>
+                      <span>C: {p.cannabis}</span>
                     </div>
-                  </Card>
+                  </div>
                 );
               }
               return null;
             }}
           />
-          <Line
-            dataKey="tobacco"
-            name="Tabaco"
-            type="monotone"
-            stroke="hsl(var(--secondary))"
-            strokeWidth={2}
-            dot={false}
-            activeDot={{ r: 3 }}
-          />
-          <Line
-            dataKey="cannabis"
-            name="Cannabis"
-            type="monotone"
-            stroke="hsl(var(--primary))"
-            strokeWidth={2}
-            dot={false}
-            activeDot={{ r: 3 }}
-          />
+          {goalLimit != null && (
+            <ReferenceLine
+              y={goalLimit}
+              stroke="hsl(var(--primary))"
+              strokeWidth={3}
+              ifOverflow="extendDomain"
+            />
+          )}
+          <Bar dataKey="total" name="Total" fill="hsl(var(--foreground))" />
           <Legend
             wrapperStyle={{ fontSize: '11px', paddingTop: '4px' }}
             formatter={(value) => (
-              <span style={{ color: 'hsl(var(--muted-foreground))', fontFamily: 'sans-serif' }}>{value}</span>
+              <span style={{ color: 'hsl(var(--foreground))', fontFamily: 'inherit', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{value}</span>
             )}
           />
         </ComposedChart>
