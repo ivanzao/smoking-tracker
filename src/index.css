@@ -36,17 +36,6 @@
     --ring:                      0  0%  7%;
 
     --radius: 0rem;
-
-    /* Compat (legacy tokens used em pages/components até serem migrados; removidos na Task 25) */
-    --surface-container-lowest:  0  0% 100%;
-    --surface-container-low:     0  0% 100%;
-    --surface-container:         0  0% 100%;
-    --surface-container-high:   42 30% 88%;
-    --surface-container-highest:42 30% 88%;
-    --on-surface:                0  0%  7%;
-    --on-surface-variant:        0  0% 40%;
-    --on-primary:                0  0%  7%;
-    --outline-variant:           0  0%  7%;
   }
 }
 

@@ -46,16 +46,6 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        /* Compat — removidos na Task 25 */
-        'surface-container-lowest': 'hsl(var(--surface-container-lowest))',
-        'surface-container-low':    'hsl(var(--surface-container-low))',
-        'surface-container':        'hsl(var(--surface-container))',
-        'surface-container-high':   'hsl(var(--surface-container-high))',
-        'surface-container-highest':'hsl(var(--surface-container-highest))',
-        'on-surface':               'hsl(var(--on-surface))',
-        'on-surface-variant':       'hsl(var(--on-surface-variant))',
-        'on-primary':               'hsl(var(--on-primary))',
-        'outline-variant':          'hsl(var(--outline-variant))',
       },
       borderRadius: {
         lg: "var(--radius)",
