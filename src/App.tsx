@@ -40,12 +40,12 @@ const App = () => {
       <Sonner />
 
       {/* Mobile header */}
-      <header className="md:hidden fixed top-0 w-full z-50 bg-background flex justify-between items-center px-6 h-16 border-b border-outline-variant/10">
-        <span className="text-primary font-black tracking-tighter text-xl">Smoking Tracker</span>
+      <header className="md:hidden fixed top-0 w-full z-50 bg-card flex justify-between items-center px-6 h-16 border-b-2 border-border">
+        <span className="text-foreground font-bold tracking-tight text-xl">Smoking Tracker</span>
         <button
           onClick={() => setTab('goals')}
           aria-label="Configurações"
-          className="p-2 text-on-surface-variant hover:bg-surface-container-high rounded-full transition-colors active:scale-95"
+          className="p-2 text-foreground hover:bg-muted transition-colors"
         >
           <span className="material-symbols-outlined">settings</span>
         </button>
