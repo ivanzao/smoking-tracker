@@ -23,7 +23,6 @@ export const TrackerPage = ({ tracker, onOpenNewEvent }: TrackerPageProps) => {
   });
   const maxTotal = Math.max(1, ...weekTotals.map((w) => w.total));
 
-  // Desktop: today + 2 previous days, skip days with no events
   const todayStr = todayKey();
   const todayNoon = parseISO(todayStr + 'T12:00:00');
   const recentDays = [todayStr, format(subDays(todayNoon, 1), 'yyyy-MM-dd'), format(subDays(todayNoon, 2), 'yyyy-MM-dd')];
@@ -49,7 +48,7 @@ export const TrackerPage = ({ tracker, onOpenNewEvent }: TrackerPageProps) => {
       <main className="flex-1 px-6 pt-24 pb-32 overflow-y-auto md:hidden">
         {/* Quick Log */}
         <section className="mb-8 space-y-4">
-          <p className="text-[10px] font-medium text-on-surface-variant uppercase tracking-[0.1em]">
+          <p className="text-xs font-bold uppercase tracking-wider">
             Quick Log
           </p>
           <div className="grid grid-cols-2 gap-4">
@@ -59,18 +58,12 @@ export const TrackerPage = ({ tracker, onOpenNewEvent }: TrackerPageProps) => {
                 <button
                   key={type}
                   onClick={() => onOpenNewEvent(type)}
-                  className={`flex flex-col items-center justify-center gap-3 bg-surface-container-high p-6 rounded-2xl border border-transparent transition-all active:scale-95 group ${
-                    isTobacco ? 'hover:border-secondary/30' : 'hover:border-primary/30'
-                  }`}
+                  className="flex flex-col items-center justify-center gap-3 bg-card border-2 border-border shadow-brutal p-6 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-transform"
                 >
-                  <span
-                    className={`material-symbols-outlined text-4xl group-hover:scale-110 transition-transform ${
-                      isTobacco ? 'text-secondary' : 'text-primary'
-                    }`}
-                  >
+                  <span className="material-symbols-outlined text-4xl">
                     {isTobacco ? 'smoke_free' : 'potted_plant'}
                   </span>
-                  <span className="text-[10px] font-bold tracking-widest text-on-surface uppercase">
+                  <span className="text-[10px] font-bold tracking-wider uppercase">
                     {isTobacco ? 'Tabaco' : 'Cannabis'}
                   </span>
                 </button>
@@ -83,12 +76,12 @@ export const TrackerPage = ({ tracker, onOpenNewEvent }: TrackerPageProps) => {
         {currentGoal && streak > 0 && (
           <section className="mb-8">
             <div className="flex flex-col items-start">
-              <span className="text-[10px] font-medium text-on-surface-variant uppercase tracking-[0.2em] mb-1">
+              <span className="text-xs font-bold uppercase tracking-wider mb-1">
                 Streak Atual
               </span>
               <div className="flex items-baseline gap-2">
-                <h2 className="text-5xl font-bold tracking-tight text-primary">{streak}</h2>
-                <span className="text-xl font-semibold text-primary/60">dias</span>
+                <h2 className="text-5xl font-bold tracking-tight">{streak}</h2>
+                <span className="text-xl font-semibold text-muted-foreground">dias</span>
               </div>
             </div>
           </section>
@@ -97,62 +90,59 @@ export const TrackerPage = ({ tracker, onOpenNewEvent }: TrackerPageProps) => {
         {/* Bento Grid */}
         <div className="grid grid-cols-2 gap-4">
           {/* Today's Consumption */}
-          <div className="col-span-2 bg-surface-container-low rounded-xl p-6 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl -mr-16 -mt-16" />
-            <div className="relative z-10">
-              <p className="text-[10px] font-medium text-on-surface-variant uppercase tracking-[0.1em] mb-4">
-                Consumo de Hoje
-              </p>
-              <div className="flex justify-between items-end">
-                <div className="space-y-4">
-                  <div>
-                    <p className="text-secondary text-sm font-medium mb-1">Tabaco</p>
-                    <p className="text-3xl font-bold text-on-surface">{totals.tobacco}</p>
-                  </div>
-                  <div>
-                    <p className="text-primary text-sm font-medium mb-1">Cannabis</p>
-                    <p className="text-3xl font-bold text-on-surface">{totals.cannabis}</p>
-                  </div>
+          <div className="col-span-2 bg-card text-foreground border-2 border-border shadow-brutal p-6">
+            <p className="text-xs font-bold uppercase tracking-wider mb-4">
+              Consumo de Hoje
+            </p>
+            <div className="flex justify-between items-end">
+              <div className="space-y-4">
+                <div>
+                  <p className="text-sm font-bold uppercase tracking-wider mb-1">Tabaco</p>
+                  <p className="text-3xl font-bold">{totals.tobacco}</p>
                 </div>
-                {currentGoal && (
-                  <div className="text-right">
-                    <p className="text-[10px] text-on-surface-variant uppercase tracking-widest mb-1">
-                      Meta Diária
-                    </p>
-                    <div className="flex items-baseline justify-end gap-1">
-                      <span className="text-4xl font-black text-on-surface">{todayTotal}</span>
-                      <span className="text-xl font-medium text-on-surface-variant">
-                        / {currentGoal.limit}
-                      </span>
-                    </div>
-                  </div>
-                )}
+                <div>
+                  <p className="text-sm font-bold uppercase tracking-wider mb-1">Cannabis</p>
+                  <p className="text-3xl font-bold">{totals.cannabis}</p>
+                </div>
               </div>
               {currentGoal && (
-                <div className="mt-6 h-1.5 w-full bg-surface-container-high rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-primary to-primary-container rounded-full transition-all"
-                    style={{ width: `${Math.min(100, (todayTotal / currentGoal.limit) * 100)}%` }}
-                  />
+                <div className="text-right">
+                  <p className="text-[10px] uppercase tracking-wider font-bold mb-1">
+                    Meta Diária
+                  </p>
+                  <div className="flex items-baseline justify-end gap-1">
+                    <span className="text-4xl font-bold">{todayTotal}</span>
+                    <span className="text-xl font-semibold text-muted-foreground">
+                      / {currentGoal.limit}
+                    </span>
+                  </div>
                 </div>
               )}
             </div>
+            {currentGoal && (
+              <div className="mt-6 h-3 w-full bg-muted border-2 border-border overflow-hidden">
+                <div
+                  className="h-full bg-primary"
+                  style={{ width: `${Math.min(100, (todayTotal / currentGoal.limit) * 100)}%` }}
+                />
+              </div>
+            )}
           </div>
 
           {/* Last 7 Days mini chart */}
-          <div className="col-span-2 bg-surface-container rounded-xl p-5">
-            <p className="text-[10px] font-medium text-on-surface-variant uppercase tracking-[0.1em] mb-6">
+          <div className="col-span-2 bg-card border-2 border-border shadow-brutal p-5">
+            <p className="text-xs font-bold uppercase tracking-wider mb-6">
               Últimos 7 Dias
             </p>
             <div className="h-24 flex items-end justify-between gap-1">
               {weekTotals.map(({ dayKey, total, tobacco, cannabis }) => {
                 const heightPct = total > 0 ? Math.max(5, (total / maxTotal) * 100) : 3;
-                const colorClass =
-                  cannabis > tobacco ? 'bg-primary' : tobacco > 0 ? 'bg-secondary' : 'bg-surface-container-highest';
+                const bg =
+                  cannabis > tobacco ? 'bg-foreground' : tobacco > 0 ? 'bg-primary' : 'bg-muted';
                 return (
                   <div
                     key={dayKey}
-                    className={`w-full rounded-t-sm ${colorClass}`}
+                    className={`w-full border-2 border-border ${bg}`}
                     style={{ height: `${heightPct}%` }}
                   />
                 );
@@ -160,7 +150,7 @@ export const TrackerPage = ({ tracker, onOpenNewEvent }: TrackerPageProps) => {
             </div>
             <div className="flex justify-between mt-2">
               {weekTotals.map(({ dayKey }) => (
-                <span key={dayKey} className="text-[8px] text-on-surface-variant/50">
+                <span key={dayKey} className="text-[8px] uppercase font-bold text-muted-foreground">
                   {format(parseISO(dayKey + 'T00:00:00'), 'EEE', { locale: ptBR })
                     .slice(0, 1)
                     .toUpperCase()}
@@ -173,16 +163,16 @@ export const TrackerPage = ({ tracker, onOpenNewEvent }: TrackerPageProps) => {
 
       {/* Desktop layout — recent logs */}
       <main className="hidden md:flex flex-col px-8 pt-24 pb-8 ml-80 min-h-screen">
-        <h2 className="text-[10px] font-black text-on-surface-variant uppercase tracking-[0.1em] mb-6">
+        <h2 className="text-xs font-bold uppercase tracking-wider mb-6">
           Logs Recentes
         </h2>
         {recentGroups.length === 0 ? (
-          <p className="text-sm text-on-surface-variant">Nenhum registro nos últimos 3 dias.</p>
+          <p className="text-sm text-muted-foreground">Nenhum registro nos últimos 3 dias.</p>
         ) : (
           <div className="space-y-8">
             {recentGroups.map(({ dayKey, events, heading }) => (
               <section key={dayKey}>
-                <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-[0.1em] mb-3">
+                <p className="text-xs font-bold uppercase tracking-wider mb-3">
                   {heading}
                 </p>
                 <div className="space-y-2">
@@ -191,29 +181,25 @@ export const TrackerPage = ({ tracker, onOpenNewEvent }: TrackerPageProps) => {
                     return (
                       <div
                         key={event.id}
-                        className="bg-surface-container-low p-4 rounded-xl flex items-center gap-4"
+                        className="bg-card border-2 border-border p-4 flex items-center gap-4"
                       >
-                        <div
-                          className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${
-                            isCannabis ? 'bg-primary/10 text-primary' : 'bg-secondary/10 text-secondary'
-                          }`}
-                        >
+                        <div className="w-9 h-9 border-2 border-border bg-primary flex items-center justify-center flex-shrink-0">
                           <span className="material-symbols-outlined text-base">
                             {isCannabis ? 'eco' : 'smoking_rooms'}
                           </span>
                         </div>
                         <div>
-                          <p className="text-[11px] text-on-surface-variant uppercase tracking-wider">
+                          <p className="text-[11px] uppercase tracking-wider font-bold text-muted-foreground">
                             {format(parseISO(event.timestamp), 'HH:mm', { locale: ptBR })}
                           </p>
-                          <p className="text-sm font-bold text-on-surface">
+                          <p className="text-sm font-bold">
                             {isCannabis ? 'Cannabis' : 'Tabaco'}
                           </p>
                           {event.location && (
-                            <p className="text-[11px] text-on-surface-variant">{event.location}</p>
+                            <p className="text-[11px] text-muted-foreground">{event.location}</p>
                           )}
                           {event.reason && (
-                            <p className="text-[11px] text-on-surface-variant">{event.reason}</p>
+                            <p className="text-[11px] text-muted-foreground">{event.reason}</p>
                           )}
                         </div>
                       </div>
