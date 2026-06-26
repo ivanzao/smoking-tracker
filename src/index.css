@@ -4,50 +4,49 @@
 
 @layer base {
   :root {
-    /* Core surface palette */
-    --background:                0 0% 7%;
-    --foreground:               20 6% 89%;
+    /* Surfaces */
+    --background:               42 56% 92%;   /* #F5EFDF Parchment */
+    --foreground:                0  0%  7%;   /* #111111 */
 
-    --card:                      0 2% 11%;
-    --card-foreground:          20 6% 89%;
+    --card:                      0  0% 100%;  /* #FFFFFF */
+    --card-foreground:           0  0%  7%;
 
-    --popover:                   0 0% 16%;
-    --popover-foreground:       20 6% 89%;
+    --popover:                   0  0% 100%;
+    --popover-foreground:        0  0%  7%;
 
-    /* Brand colors */
-    --primary:                 141 100% 73%;
-    --primary-foreground:      148 100% 11%;
+    --muted:                    42 30% 88%;   /* #ECE5D2 */
+    --muted-foreground:          0  0% 40%;   /* #666666 */
 
-    --secondary:                17 100% 81%;
-    --secondary-foreground:     14 100% 18%;
+    --accent:                   47 100% 62%;  /* #FFD23F amarelo */
+    --accent-foreground:         0  0%  7%;
 
-    /* Surface containers (tonal depth) */
-    --surface-container-lowest:  0 0% 5%;
-    --surface-container-low:     0 2% 11%;
-    --surface-container:         0 2% 12%;
-    --surface-container-high:    0 0% 16%;
-    --surface-container-highest: 60 1% 21%;
+    /* Brand */
+    --primary:                  47 100% 62%;
+    --primary-foreground:        0  0%  7%;
 
-    /* On-surface text */
-    --on-surface:               20 6% 89%;
-    --on-surface-variant:      118 13% 76%;
-    --on-primary:              148 100% 11%;
+    --secondary:                 0  0% 100%;
+    --secondary-foreground:      0  0%  7%;
 
-    /* Borders (outline only — no structural borders) */
-    --outline-variant:         126 11% 26%;
-    --border:                  126 11% 26%;
-    --input:                     0 0% 16%;
-    --ring:                    141 100% 73%;
+    --destructive:               0 84% 60%;   /* #EF4444 */
+    --destructive-foreground:    0  0% 100%;
 
-    /* Utility */
-    --muted:                     0 2% 12%;
-    --muted-foreground:        118 13% 76%;
-    --accent:                    0 0% 16%;
-    --accent-foreground:        20 6% 89%;
-    --destructive:               5 100% 84%;
-    --destructive-foreground:  357 100% 21%;
+    /* Borders / inputs / focus */
+    --border:                    0  0%  7%;
+    --input:                     0  0% 100%;
+    --ring:                      0  0%  7%;
 
-    --radius: 0.5rem;
+    --radius: 0rem;
+
+    /* Compat (legacy tokens used em pages/components até serem migrados; removidos na Task 25) */
+    --surface-container-lowest:  0  0% 100%;
+    --surface-container-low:     0  0% 100%;
+    --surface-container:         0  0% 100%;
+    --surface-container-high:   42 30% 88%;
+    --surface-container-highest:42 30% 88%;
+    --on-surface:                0  0%  7%;
+    --on-surface-variant:        0  0% 40%;
+    --on-primary:                0  0%  7%;
+    --outline-variant:           0  0%  7%;
   }
 }
 
@@ -67,7 +66,8 @@
 
   body {
     @apply bg-background text-foreground;
-    font-family: 'Inter', sans-serif;
+    font-family: 'Space Grotesk', system-ui, sans-serif;
+    font-weight: 500;
     -webkit-font-smoothing: antialiased;
   }
 
