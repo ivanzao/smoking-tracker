@@ -44,44 +44,27 @@ export const DayCell = ({
   const goalStatus = getDayGoalStatus(dayKey);
   const weekday = format(date, 'EEE', { locale: ptBR }).slice(0, 3);
 
+  const bgClass =
+    goalStatus === 'within' ? 'bg-primary text-primary-foreground'
+    : goalStatus === 'over' ? 'bg-foreground text-card'
+    : 'bg-card text-foreground';
+
   return (
     <div
       onClick={() => onDayClick(dayKey)}
-      className={`
-        relative flex flex-col items-center gap-1 p-2 rounded-lg transition-transform duration-100 cursor-pointer hover:scale-105 active:scale-[0.93]
-        ${isToday ? 'bg-accent ring-2 ring-primary' : 'bg-card'}
-        ${total > 0 ? 'opacity-100' : 'opacity-40'}
-      `}
-    >
-      {goalStatus !== 'no-goal' && (
-        <span
-          aria-hidden
-          className={`absolute top-1 right-1 w-1.5 h-1.5 rounded-full ${
-            goalStatus === 'within' ? 'bg-primary' : 'bg-destructive'
-          }`}
-        />
+      className={cn(
+        'relative flex flex-col items-center gap-1 p-2 border-2 border-border cursor-pointer active:translate-x-[1px] active:translate-y-[1px] transition-transform',
+        bgClass,
+        isToday && 'shadow-brutal',
+        total === 0 && goalStatus === 'no-goal' && 'opacity-60',
       )}
-      <div className="text-[0.55rem] font-medium text-on-surface-variant capitalize">{weekday}</div>
-      <div className={`text-[0.7rem] ${isToday ? 'font-semibold text-on-surface' : 'text-on-surface-variant'}`}>
-        {format(date, 'dd')}
-      </div>
+    >
+      <div className="text-[0.55rem] font-bold uppercase">{weekday}</div>
+      <div className="text-[0.7rem] font-bold">{format(date, 'dd')}</div>
       {total > 0 ? (
-        <div className="flex flex-col items-center gap-0.5">
-          {totals.tobacco > 0 && (
-            <div className="flex items-center gap-1">
-              <div className="w-[5px] h-[5px] rounded-full bg-secondary" />
-              <span className="text-[0.65rem] font-semibold">{totals.tobacco}</span>
-            </div>
-          )}
-          {totals.cannabis > 0 && (
-            <div className="flex items-center gap-1">
-              <div className="w-[5px] h-[5px] rounded-full bg-primary" />
-              <span className="text-[0.65rem] font-semibold">{totals.cannabis}</span>
-            </div>
-          )}
-        </div>
+        <div className="text-[0.7rem] font-bold">{total}</div>
       ) : (
-        <span className="text-[0.6rem] text-on-surface-variant">—</span>
+        <span className="text-[0.6rem]">—</span>
       )}
     </div>
   );
@@ -107,16 +90,16 @@ export const MonthNavigation = ({
       onClick={onBack}
       disabled={!canGoBack}
       aria-label="Mês anterior"
-      className="w-8 h-8 flex items-center justify-center rounded-lg bg-surface-container-high text-on-surface-variant hover:text-on-surface disabled:opacity-30 transition-colors"
+      className="w-8 h-8 flex items-center justify-center bg-card border-2 border-border shadow-brutal-sm active:translate-x-[1px] active:translate-y-[1px] active:shadow-none transition-transform disabled:opacity-30"
     >
       <span className="material-symbols-outlined text-sm">chevron_left</span>
     </button>
-    <span className="text-sm font-medium capitalize text-on-surface">{label}</span>
+    <span className="text-sm font-bold uppercase tracking-wider capitalize">{label}</span>
     <button
       onClick={onForward}
       disabled={!canGoForward}
       aria-label="Próximo mês"
-      className="w-8 h-8 flex items-center justify-center rounded-lg bg-surface-container-high text-on-surface-variant hover:text-on-surface disabled:opacity-30 transition-colors"
+      className="w-8 h-8 flex items-center justify-center bg-card border-2 border-border shadow-brutal-sm active:translate-x-[1px] active:translate-y-[1px] active:shadow-none transition-transform disabled:opacity-30"
     >
       <span className="material-symbols-outlined text-sm">chevron_right</span>
     </button>
@@ -164,8 +147,8 @@ export const CalendarView = ({ getDayTotals, getDayGoalStatus, onDayClick, event
       <div className="sm:hidden">
         <Tabs defaultValue="week" className="w-full">
           <TabsList className="grid w-full grid-cols-2 mb-6">
-            <TabsTrigger value="week" className="rounded-xl">Semana</TabsTrigger>
-            <TabsTrigger value="month" className="rounded-xl">Mês</TabsTrigger>
+            <TabsTrigger value="week">Semana</TabsTrigger>
+            <TabsTrigger value="month">Mês</TabsTrigger>
           </TabsList>
 
           <TabsContent value="week" className="mt-0">
@@ -200,7 +183,7 @@ export const CalendarView = ({ getDayTotals, getDayGoalStatus, onDayClick, event
       <div className="hidden sm:flex flex-col flex-1 min-h-0 gap-0">
         {/* Últimos 7 dias */}
         <div className="shrink-0">
-          <p className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant mb-3">
+          <p className="text-xs font-bold uppercase tracking-wider mb-3">
             Últimos 7 dias
           </p>
           <div className="grid grid-cols-7 gap-2">
@@ -217,7 +200,7 @@ export const CalendarView = ({ getDayTotals, getDayGoalStatus, onDayClick, event
           </div>
         </div>
 
-        <div className="my-5 border-t border-border shrink-0" />
+        <div className="my-5 border-t-2 border-border shrink-0" />
 
         {/* Gráfico mensal — preenche o restante */}
         <div className="flex-1 min-h-0 flex flex-col">
