@@ -75,21 +75,21 @@ export const GoalsContent = ({ tracker }: GoalsContentProps) => {
     <div className="space-y-10">
       {/* Goal section */}
       <section>
-        <h2 className="text-[10px] font-medium text-on-surface-variant uppercase tracking-[0.2em] mb-4">
+        <h2 className="text-xs font-bold uppercase tracking-wider mb-4">
           Meta Diária
         </h2>
-        <div className="bg-surface-container rounded-xl p-5 border-l-4 border-primary">
+        <div className="bg-card border-2 border-border shadow-brutal p-5">
           <div className="flex justify-between items-start mb-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+              <div className="w-10 h-10 bg-primary border-2 border-border flex items-center justify-center">
                 <span className="material-symbols-outlined">track_changes</span>
               </div>
               <div>
-                <h4 className="font-bold text-on-surface">Limite por dia</h4>
-                <p className="text-xs text-on-surface-variant">Tabaco + Cannabis combinados</p>
+                <h4 className="font-bold">Limite por dia</h4>
+                <p className="text-xs text-muted-foreground">Tabaco + Cannabis combinados</p>
               </div>
             </div>
-            <span className="text-primary font-black text-2xl italic tracking-tighter">
+            <span className="font-bold text-3xl tracking-tight">
               {String(goalValue).padStart(2, '0')}
             </span>
           </div>
@@ -100,13 +100,13 @@ export const GoalsContent = ({ tracker }: GoalsContentProps) => {
             value={goalValue}
             onChange={(e) => setGoalValue(Number(e.target.value))}
             aria-label="Meta diária"
-            className="w-full h-1 bg-surface-container-highest rounded-lg appearance-none cursor-pointer accent-primary mb-4"
+            className="w-full h-2 bg-muted appearance-none cursor-pointer accent-primary mb-4 border-2 border-border"
           />
           <div className="flex items-center gap-3">
             <button
               onClick={handleSaveGoal}
               aria-label="Salvar meta"
-              className="flex-1 py-2.5 rounded-full bg-gradient-to-r from-primary to-primary-container text-on-primary text-sm font-bold tracking-wide transition-all active:scale-95"
+              className="flex-1 py-2.5 bg-primary text-primary-foreground border-2 border-border shadow-brutal-sm text-sm font-bold uppercase tracking-wider active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-transform"
             >
               Salvar Meta
             </button>
@@ -114,7 +114,7 @@ export const GoalsContent = ({ tracker }: GoalsContentProps) => {
               <button
                 onClick={handleRemoveGoal}
                 aria-label="Remover meta"
-                className="text-xs text-destructive hover:underline px-2"
+                className="text-xs text-destructive hover:underline px-2 font-semibold"
               >
                 Remover
               </button>
@@ -125,30 +125,30 @@ export const GoalsContent = ({ tracker }: GoalsContentProps) => {
 
       {/* Data section */}
       <section>
-        <h2 className="text-[10px] font-medium text-on-surface-variant uppercase tracking-[0.2em] mb-4">
+        <h2 className="text-xs font-bold uppercase tracking-wider mb-4">
           Dados
         </h2>
-        <div className="bg-surface-container rounded-xl overflow-hidden">
+        <div className="bg-card border-2 border-border shadow-brutal">
           <button
             onClick={handleExport}
             aria-label="Exportar JSON"
-            className="w-full p-4 flex items-center gap-3 border-b border-outline-variant/10 hover:bg-surface-container-high transition-colors text-left"
+            className="w-full p-4 flex items-center gap-3 border-b-2 border-border hover:bg-muted text-left transition-colors"
           >
-            <span className="material-symbols-outlined text-primary">download</span>
+            <span className="material-symbols-outlined">download</span>
             <div>
-              <p className="text-sm font-medium text-on-surface">Exportar JSON</p>
-              <p className="text-[10px] text-on-surface-variant">Baixa backup de todos os eventos</p>
+              <p className="text-sm font-bold">Exportar JSON</p>
+              <p className="text-[10px] text-muted-foreground">Baixa backup de todos os eventos</p>
             </div>
           </button>
           <button
             onClick={() => fileInputRef.current?.click()}
             aria-label="Importar JSON"
-            className="w-full p-4 flex items-center gap-3 hover:bg-surface-container-high transition-colors text-left"
+            className="w-full p-4 flex items-center gap-3 hover:bg-muted text-left transition-colors"
           >
-            <span className="material-symbols-outlined text-on-surface-variant">upload</span>
+            <span className="material-symbols-outlined">upload</span>
             <div>
-              <p className="text-sm font-medium text-on-surface">Importar JSON</p>
-              <p className="text-[10px] text-on-surface-variant">Restaura a partir de um backup</p>
+              <p className="text-sm font-bold">Importar JSON</p>
+              <p className="text-[10px] text-muted-foreground">Restaura a partir de um backup</p>
             </div>
           </button>
           <input
@@ -169,7 +169,7 @@ export const GoalsContent = ({ tracker }: GoalsContentProps) => {
             tracker.events.forEach((e) => tracker.removeEvent(e.id));
             toast.success('Todos os dados apagados');
           }}
-          className="text-destructive font-medium text-sm flex items-center justify-center gap-2 mx-auto hover:bg-destructive/5 px-4 py-2 rounded-full transition-colors"
+          className="text-destructive font-bold uppercase tracking-wider text-xs flex items-center justify-center gap-2 mx-auto hover:underline px-4 py-2 transition-colors"
         >
           <span className="material-symbols-outlined text-sm">delete_forever</span>
           Limpar todos os dados
