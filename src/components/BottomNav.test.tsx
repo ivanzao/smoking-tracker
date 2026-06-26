@@ -10,12 +10,12 @@ describe('BottomNav', () => {
     expect(screen.getByRole('button', { name: /goals/i })).toBeInTheDocument();
   });
 
-  it('applies primary color class to the active tab only', () => {
+  it('applies primary background class to the active tab only', () => {
     render(<BottomNav tab="history" onChange={() => {}} />);
     const historyBtn = screen.getByRole('button', { name: /history/i });
     const trackerBtn = screen.getByRole('button', { name: /tracker/i });
-    expect(historyBtn.className).toContain('text-primary');
-    expect(trackerBtn.className).not.toContain('text-primary');
+    expect(historyBtn.className).toContain('bg-primary');
+    expect(trackerBtn.className).not.toContain('bg-primary');
   });
 
   it('calls onChange with the correct tab when a button is clicked', () => {
