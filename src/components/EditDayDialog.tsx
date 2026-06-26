@@ -80,27 +80,21 @@ export const EditDayDialog = ({
           {sorted.map((ev) => {
             const Icon = ev.type === 'tobacco' ? Cigarette : Leaf;
             const time = format(parseISO(ev.timestamp), 'HH:mm');
-            const iconBg = ev.type === 'tobacco'
-              ? 'hsl(var(--secondary) / 0.15)'
-              : 'hsl(var(--primary) / 0.15)';
             const context = [ev.location, ev.reason].filter(Boolean).join(' · ');
 
             return (
               <div
                 key={ev.id}
                 onClick={() => setEditingEvent(ev)}
-                className="flex items-center gap-3 p-3.5 rounded-lg border bg-card cursor-pointer hover:bg-accent/50 active:scale-[0.98] transition-all duration-100"
+                className="flex items-center gap-3 p-3 border-2 border-border bg-card cursor-pointer hover:bg-muted active:translate-x-[1px] active:translate-y-[1px] transition-transform"
               >
-                <div
-                  className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
-                  style={{ background: iconBg }}
-                >
+                <div className="w-9 h-9 border-2 border-border bg-primary flex items-center justify-center shrink-0">
                   <Icon className="w-4 h-4" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-semibold">{time}</div>
+                  <div className="text-sm font-bold">{time}</div>
                   <div className="text-xs text-muted-foreground truncate">
-                    {context || <span className="text-muted-foreground/50">sem contexto</span>}
+                    {context || <span className="text-muted-foreground/60">sem contexto</span>}
                   </div>
                 </div>
                 <button
@@ -116,11 +110,11 @@ export const EditDayDialog = ({
                     });
                   }}
                   aria-label="Remover evento"
-                  className="p-2 rounded-md text-muted-foreground hover:bg-destructive/15 hover:text-destructive transition-colors"
+                  className="p-2 text-foreground hover:bg-destructive hover:text-destructive-foreground transition-colors"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
-                <ChevronRight className="w-4 h-4 text-muted-foreground/40 shrink-0" />
+                <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
               </div>
             );
           })}
