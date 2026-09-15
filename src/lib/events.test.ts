@@ -2,6 +2,9 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   getDayKey,
   nowLocalIso,
+  toLocalIso,
+  buildLocalIso,
+  isFutureIso,
   todayKey,
   getEventsForDay,
   getDayTotals,
@@ -40,6 +43,42 @@ describe('nowLocalIso', () => {
     const iso = nowLocalIso();
     expect(iso).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}$/);
     expect(new Date(iso).toISOString()).toBe('2026-04-08T14:30:00.000Z');
+  });
+});
+
+describe('toLocalIso', () => {
+  it('formats a Date as local ISO with offset', () => {
+    const iso = toLocalIso(new Date('2026-04-08T14:30:00Z'));
+    expect(iso).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}$/);
+    expect(new Date(iso).toISOString()).toBe('2026-04-08T14:30:00.000Z');
+  });
+});
+
+describe('buildLocalIso', () => {
+  it('combines a day key and HH:mm into a local ISO timestamp', () => {
+    const iso = buildLocalIso('2026-04-08', '09:05');
+    expect(iso).toMatch(/^2026-04-08T09:05:00[+-]\d{2}:\d{2}$/);
+    expect(getDayKey(iso)).toBe('2026-04-08');
+  });
+
+  it('returns null for malformed input', () => {
+    expect(buildLocalIso('', '09:05')).toBeNull();
+    expect(buildLocalIso('2026-04-08', '')).toBeNull();
+    expect(buildLocalIso('2026-13-40', '09:05')).toBeNull();
+  });
+});
+
+describe('isFutureIso', () => {
+  beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(new Date('2026-04-08T14:30:00Z')); });
+  afterEach(() => { vi.useRealTimers(); });
+
+  it('is false for now and the past', () => {
+    expect(isFutureIso('2026-04-08T11:30:00-03:00')).toBe(false);
+    expect(isFutureIso('2026-04-08T11:29:00-03:00')).toBe(false);
+  });
+
+  it('is true for the future', () => {
+    expect(isFutureIso('2026-04-08T11:31:00-03:00')).toBe(true);
   });
 });
 

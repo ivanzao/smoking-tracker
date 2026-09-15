@@ -1,15 +1,17 @@
 import { format, parseISO, subDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { EventType } from '@/types';
+import { toast } from 'sonner';
+import { EventType, TrackerEvent } from '@/types';
 import { UseTrackerAPI } from '@/hooks/useTracker';
 import { getDaysInRange, todayKey } from '@/lib/events';
 
 interface TrackerPageProps {
   tracker: UseTrackerAPI;
   onOpenNewEvent: (type: EventType) => void;
+  onOpenEditEvent: (event: TrackerEvent) => void;
 }
 
-export const TrackerPage = ({ tracker, onOpenNewEvent }: TrackerPageProps) => {
+export const TrackerPage = ({ tracker, onOpenNewEvent, onOpenEditEvent }: TrackerPageProps) => {
   const totals = tracker.getTodayTotals();
   const todayTotal = totals.tobacco + totals.cannabis;
   const currentGoal = tracker.getCurrentGoal();
@@ -26,6 +28,17 @@ export const TrackerPage = ({ tracker, onOpenNewEvent }: TrackerPageProps) => {
   const todayStr = todayKey();
   const todayNoon = parseISO(todayStr + 'T12:00:00');
   const recentDays = [todayStr, format(subDays(todayNoon, 1), 'yyyy-MM-dd'), format(subDays(todayNoon, 2), 'yyyy-MM-dd')];
+  const handleRemoveEvent = (id: string) => {
+    tracker.removeEvent(id);
+    toast('Evento removido', {
+      duration: 5000,
+      action: {
+        label: 'Desfazer',
+        onClick: () => tracker.executeUndo(),
+      },
+    });
+  };
+
   const recentGroups = recentDays
     .map((dayKey, idx) => {
       const events = tracker
@@ -181,14 +194,23 @@ export const TrackerPage = ({ tracker, onOpenNewEvent }: TrackerPageProps) => {
                     return (
                       <div
                         key={event.id}
-                        className="bg-card border-2 border-border p-4 flex items-center gap-4"
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => onOpenEditEvent(event)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            onOpenEditEvent(event);
+                          }
+                        }}
+                        className="bg-card border-2 border-border p-4 flex items-center gap-4 cursor-pointer hover:bg-muted active:translate-x-[1px] active:translate-y-[1px] transition-transform"
                       >
                         <div className="w-9 h-9 border-2 border-border bg-primary flex items-center justify-center flex-shrink-0">
                           <span className="material-symbols-outlined text-base">
                             {isCannabis ? 'eco' : 'smoking_rooms'}
                           </span>
                         </div>
-                        <div>
+                        <div className="flex-1 min-w-0">
                           <p className="text-[11px] uppercase tracking-wider font-bold text-muted-foreground">
                             {format(parseISO(event.timestamp), 'HH:mm', { locale: ptBR })}
                           </p>
@@ -202,6 +224,21 @@ export const TrackerPage = ({ tracker, onOpenNewEvent }: TrackerPageProps) => {
                             <p className="text-[11px] text-muted-foreground">{event.reason}</p>
                           )}
                         </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRemoveEvent(event.id);
+                          }}
+                          // keep Enter/Space from reaching the row's edit handler
+                          onKeyDown={(e) => e.stopPropagation()}
+                          aria-label="Remover evento"
+                          className="p-2 text-foreground hover:bg-destructive hover:text-destructive-foreground transition-colors"
+                        >
+                          <span className="material-symbols-outlined text-base">delete</span>
+                        </button>
+                        <span className="material-symbols-outlined text-base text-muted-foreground flex-shrink-0">
+                          chevron_right
+                        </span>
                       </div>
                     );
                   })}

@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { EditEventDrawer } from './EditEventDrawer';
+import { getDayKey } from '@/lib/events';
 import { TrackerEvent } from '@/types';
 
 interface EditDayDialogProps {
@@ -43,6 +44,14 @@ export const EditDayDialog = ({
     : '';
 
   const sorted = [...events].sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+
+  // The list only shows this day's events, so an event moved elsewhere vanishes — say where it went
+  const handleSaveEvent = (id: string, patch: Partial<Omit<TrackerEvent, 'id'>>) => {
+    onUpdateEvent(id, patch);
+    if (patch.timestamp && dayKey && getDayKey(patch.timestamp) !== dayKey) {
+      toast(`Movido para ${format(parseISO(patch.timestamp), 'dd/MM')}`);
+    }
+  };
 
   const handleClearDay = () => {
     if (!dayKey) return;
@@ -137,7 +146,7 @@ export const EditDayDialog = ({
           open={editingEvent !== null}
           onOpenChange={(isOpen) => { if (!isOpen) setEditingEvent(null); }}
           event={editingEvent}
-          onSave={onUpdateEvent}
+          onSave={handleSaveEvent}
         />
       </DialogContent>
     </Dialog>

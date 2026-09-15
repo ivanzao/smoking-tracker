@@ -22,6 +22,8 @@ function makeTracker(overrides: Partial<UseTrackerAPI> = {}): UseTrackerAPI {
     getCurrentGoal: vi.fn(() => null),
     getDayGoalStatus: vi.fn(() => 'no-goal' as const),
     getCurrentStreak: vi.fn(() => 0),
+    streakResetDay: null,
+    resetStreak: vi.fn(),
     getRollingAverage: vi.fn(() => 0),
     getAverageDelta: vi.fn(() => null),
     ...overrides,
@@ -48,6 +50,47 @@ describe('GoalsContent', () => {
     });
     render(<GoalsContent tracker={tracker} />);
     expect(screen.getByRole('slider')).toHaveValue('7');
+  });
+
+  it('hides the reset streak button when there is no goal', () => {
+    const tracker = makeTracker({ getCurrentStreak: vi.fn(() => 3) });
+    render(<GoalsContent tracker={tracker} />);
+    expect(screen.queryByRole('button', { name: /resetar streak/i })).toBeNull();
+  });
+
+  it('hides the reset streak button when the streak is already 0', () => {
+    const tracker = makeTracker({
+      getCurrentGoal: vi.fn(() => ({ id: '1', limit: 5, effectiveFrom: '2024-01-01' })),
+      getCurrentStreak: vi.fn(() => 0),
+    });
+    render(<GoalsContent tracker={tracker} />);
+    expect(screen.queryByRole('button', { name: /resetar streak/i })).toBeNull();
+  });
+
+  it('resets the streak after confirmation', () => {
+    const resetStreak = vi.fn();
+    const tracker = makeTracker({
+      resetStreak,
+      getCurrentGoal: vi.fn(() => ({ id: '1', limit: 5, effectiveFrom: '2024-01-01' })),
+      getCurrentStreak: vi.fn(() => 3),
+    });
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    render(<GoalsContent tracker={tracker} />);
+    fireEvent.click(screen.getByRole('button', { name: /resetar streak/i }));
+    expect(resetStreak).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not reset the streak when confirmation is declined', () => {
+    const resetStreak = vi.fn();
+    const tracker = makeTracker({
+      resetStreak,
+      getCurrentGoal: vi.fn(() => ({ id: '1', limit: 5, effectiveFrom: '2024-01-01' })),
+      getCurrentStreak: vi.fn(() => 3),
+    });
+    vi.spyOn(window, 'confirm').mockReturnValue(false);
+    render(<GoalsContent tracker={tracker} />);
+    fireEvent.click(screen.getByRole('button', { name: /resetar streak/i }));
+    expect(resetStreak).not.toHaveBeenCalled();
   });
 
   it('calls exportEvents and triggers download when export button clicked', () => {

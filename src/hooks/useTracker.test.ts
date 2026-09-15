@@ -71,6 +71,22 @@ describe('useTracker — addEvent', () => {
     expect(parsed.events[0].reason).toBe('pós almoço');
   });
 
+  it('uses the provided timestamp instead of now', () => {
+    const { result } = renderHook(() => useTracker());
+    act(() => {
+      result.current.addEvent({ type: 'tobacco', timestamp: '2026-04-06T09:15:00-03:00' });
+    });
+    expect(result.current.events[0].timestamp).toBe('2026-04-06T09:15:00-03:00');
+    expect(result.current.getDayTotals('2026-04-06')).toEqual({ tobacco: 1, cannabis: 0 });
+  });
+
+  it('keeps events sorted by timestamp when backdating', () => {
+    const { result } = renderHook(() => useTracker());
+    act(() => { result.current.addEvent({ type: 'tobacco' }); });
+    act(() => { result.current.addEvent({ type: 'cannabis', timestamp: '2026-04-06T09:15:00-03:00' }); });
+    expect(result.current.events.map((e) => e.type)).toEqual(['cannabis', 'tobacco']);
+  });
+
   it('normalizes empty-string location/reason to undefined', () => {
     const { result } = renderHook(() => useTracker());
     act(() => {
@@ -133,6 +149,19 @@ describe('useTracker — updateEvent', () => {
       result.current.updateEvent('a', { timestamp: '2026-04-08T15:30:00-03:00' });
     });
     expect(result.current.events[0].timestamp).toBe('2026-04-08T15:30:00-03:00');
+  });
+
+  it('re-sorts events when a timestamp moves', () => {
+    const seed: TrackerEvent[] = [
+      { id: 'a', timestamp: '2026-04-08T10:00:00-03:00', type: 'tobacco' },
+      { id: 'b', timestamp: '2026-04-08T12:00:00-03:00', type: 'cannabis' },
+    ];
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ events: seed }));
+    const { result } = renderHook(() => useTracker());
+    act(() => {
+      result.current.updateEvent('a', { timestamp: '2026-04-09T08:00:00-03:00' });
+    });
+    expect(result.current.events.map((e) => e.id)).toEqual(['b', 'a']);
   });
 });
 
@@ -408,6 +437,73 @@ describe('useTracker — reactive streak', () => {
     const secondId = result.current.events[1].id;
     act(() => { result.current.removeEvent(secondId); });
     expect(result.current.getCurrentStreak()).toBeGreaterThan(0);
+  });
+});
+
+describe('useTracker — streak reset', () => {
+  beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(new Date('2026-04-10T14:00:00Z')); });
+  afterEach(() => { vi.useRealTimers(); });
+
+  const goals: GoalEntry[] = [{ id: 'g1', limit: 5, effectiveFrom: '2026-04-01' }];
+
+  it('starts with null when storage has no marker', () => {
+    const { result } = renderHook(() => useTracker());
+    expect(result.current.streakResetDay).toBeNull();
+  });
+
+  it('loads a valid marker from storage', () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ events: [], goals, streakResetDay: '2026-04-09' }));
+    const { result } = renderHook(() => useTracker());
+    expect(result.current.streakResetDay).toBe('2026-04-09');
+    expect(result.current.getCurrentStreak()).toBe(1);
+  });
+
+  it('ignores a malformed marker in storage', () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ events: [], goals, streakResetDay: 'x' }));
+    const { result } = renderHook(() => useTracker());
+    expect(result.current.streakResetDay).toBeNull();
+  });
+
+  it('resetStreak zeroes the streak today and persists the marker', () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ events: [], goals }));
+    const { result } = renderHook(() => useTracker());
+    expect(result.current.getCurrentStreak()).toBe(10);
+
+    act(() => { result.current.resetStreak(); });
+    expect(result.current.streakResetDay).toBe('2026-04-10');
+    expect(result.current.getCurrentStreak()).toBe(0);
+    expect(JSON.parse(localStorage.getItem(STORAGE_KEY)!).streakResetDay).toBe('2026-04-10');
+  });
+
+  it('streak resumes the day after a reset', () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ events: [], goals, streakResetDay: '2026-04-10' }));
+    const { result } = renderHook(() => useTracker());
+    expect(result.current.getCurrentStreak()).toBe(0);
+
+    vi.setSystemTime(new Date('2026-04-11T14:00:00Z'));
+    const { result: next } = renderHook(() => useTracker());
+    expect(next.current.getCurrentStreak()).toBe(1);
+  });
+
+  it('round-trips the marker through export/import, keeping the latest', () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ events: [], goals, streakResetDay: '2026-04-05' }));
+    const { result } = renderHook(() => useTracker());
+    expect(JSON.parse(result.current.exportEvents()).streakResetDay).toBe('2026-04-05');
+
+    const file = {
+      version: 2,
+      exportedAt: '2026-04-08T20:00:00-03:00',
+      eventCount: 0,
+      dateRange: { from: null, to: null },
+      events: [],
+      goals: [],
+      streakResetDay: '2026-04-09',
+    };
+    act(() => { result.current.importEvents(JSON.stringify(file)); });
+    expect(result.current.streakResetDay).toBe('2026-04-09');
+
+    act(() => { result.current.importEvents(JSON.stringify({ ...file, streakResetDay: '2026-04-02' })); });
+    expect(result.current.streakResetDay).toBe('2026-04-09');
   });
 });
 

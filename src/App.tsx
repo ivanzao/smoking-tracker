@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { format, parseISO } from 'date-fns';
 import { toast } from 'sonner';
 import { Toaster } from '@/components/ui/toaster';
 import { Toaster as Sonner } from '@/components/ui/sonner';
@@ -8,10 +9,12 @@ import { TopNav } from '@/components/TopNav';
 import { TrackerPage } from '@/pages/TrackerPage';
 import { HistoryPage } from '@/pages/HistoryPage';
 import { GoalsPage } from '@/pages/GoalsPage';
-import { NewEventDrawer } from '@/components/NewEventDrawer';
+import { NewEventDrawer, NewEventInput } from '@/components/NewEventDrawer';
 import { EditDayDialog } from '@/components/EditDayDialog';
+import { EditEventDrawer } from '@/components/EditEventDrawer';
 import { useTracker } from '@/hooks/useTracker';
-import { EventType } from '@/types';
+import { getDayKey, todayKey } from '@/lib/events';
+import { EventType, TrackerEvent } from '@/types';
 
 type Tab = 'tracker' | 'history' | 'goals';
 
@@ -20,10 +23,16 @@ const App = () => {
   const [tab, setTab] = useState<Tab>('tracker');
   const [drawerType, setDrawerType] = useState<EventType | null>(null);
   const [editingDay, setEditingDay] = useState<string | null>(null);
+  const [editingEvent, setEditingEvent] = useState<TrackerEvent | null>(null);
 
-  const handleSubmitEvent = (input: { type: EventType; location?: string; reason?: string }) => {
+  const handleSubmitEvent = (input: NewEventInput) => {
     tracker.addEvent(input);
-    toast.success(`+1 ${input.type === 'tobacco' ? 'tabaco' : 'cannabis'}`, {
+    const label = input.type === 'tobacco' ? 'tabaco' : 'cannabis';
+    // Point out when the event didn't land on today, since "Consumo de Hoje" won't move
+    const daySuffix = getDayKey(input.timestamp) === todayKey()
+      ? ''
+      : ` · ${format(parseISO(input.timestamp), 'dd/MM')}`;
+    toast.success(`+1 ${label}${daySuffix}`, {
       duration: 5000,
       action: {
         label: 'Desfazer',
@@ -64,6 +73,7 @@ const App = () => {
         <TrackerPage
           tracker={tracker}
           onOpenNewEvent={(type) => setDrawerType(type)}
+          onOpenEditEvent={(event) => setEditingEvent(event)}
         />
       )}
       {tab === 'history' && (
@@ -88,6 +98,13 @@ const App = () => {
         onOpenChange={(open) => !open && setDrawerType(null)}
         type={drawerType}
         onSubmit={handleSubmitEvent}
+      />
+
+      <EditEventDrawer
+        open={editingEvent !== null}
+        onOpenChange={(open) => !open && setEditingEvent(null)}
+        event={editingEvent}
+        onSave={tracker.updateEvent}
       />
 
       <EditDayDialog

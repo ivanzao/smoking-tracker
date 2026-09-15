@@ -13,10 +13,16 @@ export interface ExportFile {
   };
   events: TrackerEvent[];
   goals: GoalEntry[];
+  /** Manual streak reset marker (day key), see getCurrentStreak. */
+  streakResetDay: string | null;
 }
 
-export function serializeExport(events: TrackerEvent[], goals: GoalEntry[] = []): string {
-  return JSON.stringify(buildExport(events, goals), null, 2);
+export function serializeExport(
+  events: TrackerEvent[],
+  goals: GoalEntry[] = [],
+  streakResetDay: string | null = null,
+): string {
+  return JSON.stringify(buildExport(events, goals, streakResetDay), null, 2);
 }
 
 export type ImportError =
@@ -27,7 +33,14 @@ export type ImportError =
   | 'invalid-goals';
 
 export type ParseResult =
-  | { ok: true; events: TrackerEvent[]; goals: GoalEntry[]; exportedAt: string; eventCount: number }
+  | {
+      ok: true;
+      events: TrackerEvent[];
+      goals: GoalEntry[];
+      streakResetDay: string | null;
+      exportedAt: string;
+      eventCount: number;
+    }
   | { ok: false; error: ImportError };
 
 const REQUIRED_ROOT_KEYS = ['version', 'exportedAt', 'eventCount', 'dateRange', 'events'] as const;
@@ -101,10 +114,20 @@ export function parseImport(raw: string): ParseResult {
     goals = parsed.goals as GoalEntry[];
   }
 
+  // Optional field — absent in files exported before manual streak reset existed
+  let streakResetDay: string | null = null;
+  if (parsed.streakResetDay !== undefined && parsed.streakResetDay !== null) {
+    if (typeof parsed.streakResetDay !== 'string' || !DAY_KEY_RE.test(parsed.streakResetDay)) {
+      return { ok: false, error: 'invalid-shape' };
+    }
+    streakResetDay = parsed.streakResetDay;
+  }
+
   return {
     ok: true,
     events: parsed.events as TrackerEvent[],
     goals,
+    streakResetDay,
     exportedAt: typeof parsed.exportedAt === 'string' ? parsed.exportedAt : '',
     eventCount: typeof parsed.eventCount === 'number' ? parsed.eventCount : parsed.events.length,
   };
@@ -164,7 +187,21 @@ export function mergeGoals(
   return { merged, added: additions.length, skipped };
 }
 
-export function buildExport(events: TrackerEvent[], goals: GoalEntry[] = []): ExportFile {
+/** The most recent reset wins, so restoring a backup never revives a streak that was zeroed. */
+export function mergeStreakReset(
+  current: string | null,
+  incoming: string | null,
+): string | null {
+  if (!current) return incoming;
+  if (!incoming) return current;
+  return incoming > current ? incoming : current;
+}
+
+export function buildExport(
+  events: TrackerEvent[],
+  goals: GoalEntry[] = [],
+  streakResetDay: string | null = null,
+): ExportFile {
   const from = events.length > 0 ? getDayKey(events[0].timestamp) : null;
   const to = events.length > 0 ? getDayKey(events[events.length - 1].timestamp) : null;
   return {
@@ -174,5 +211,6 @@ export function buildExport(events: TrackerEvent[], goals: GoalEntry[] = []): Ex
     dateRange: { from, to },
     events,
     goals,
+    streakResetDay,
   };
 }

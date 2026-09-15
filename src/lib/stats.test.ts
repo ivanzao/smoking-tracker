@@ -169,6 +169,30 @@ describe('getCurrentStreak', () => {
     expect(getCurrentStreak(events, goals)).toBe(2);
   });
 
+  it('returns 0 on the day of a manual reset even when within goal', () => {
+    vi.setSystemTime(new Date('2026-04-10T14:00:00Z'));
+    const goals = [mkGoal({ effectiveFrom: '2026-04-01', limit: 5 })];
+    expect(getCurrentStreak([], goals, '2026-04-10')).toBe(0);
+  });
+
+  it('counts only days after the reset marker', () => {
+    vi.setSystemTime(new Date('2026-04-12T14:00:00Z'));
+    const goals = [mkGoal({ effectiveFrom: '2026-04-01', limit: 5 })];
+    expect(getCurrentStreak([], goals, '2026-04-10')).toBe(2);
+  });
+
+  it('ignores a reset marker older than the natural streak start', () => {
+    vi.setSystemTime(new Date('2026-04-10T14:00:00Z'));
+    const goals = [mkGoal({ effectiveFrom: '2026-04-09', limit: 10 })];
+    expect(getCurrentStreak([], goals, '2026-04-01')).toBe(2);
+  });
+
+  it('treats a null reset marker as no reset', () => {
+    vi.setSystemTime(new Date('2026-04-10T14:00:00Z'));
+    const goals = [mkGoal({ effectiveFrom: '2026-04-09', limit: 10 })];
+    expect(getCurrentStreak([], goals, null)).toBe(2);
+  });
+
   it('counts days with zero events as within', () => {
     vi.setSystemTime(new Date('2026-04-10T14:00:00Z'));
     const goals = [mkGoal({ effectiveFrom: '2026-04-01', limit: 5 })];

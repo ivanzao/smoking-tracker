@@ -6,15 +6,38 @@ export function getDayKey(timestamp: string): string {
   return timestamp.slice(0, 10);
 }
 
-export function nowLocalIso(): string {
-  const now = new Date();
-  const offsetMin = -now.getTimezoneOffset();
+/** Format a Date as ISO 8601 with the local offset, e.g. "2026-04-08T14:30:00-03:00". */
+export function toLocalIso(date: Date): string {
+  const offsetMin = -date.getTimezoneOffset();
   const sign = offsetMin >= 0 ? '+' : '-';
   const abs = Math.abs(offsetMin);
   const oh = String(Math.floor(abs / 60)).padStart(2, '0');
   const om = String(abs % 60).padStart(2, '0');
-  const local = format(now, "yyyy-MM-dd'T'HH:mm:ss");
+  const local = format(date, "yyyy-MM-dd'T'HH:mm:ss");
   return `${local}${sign}${oh}:${om}`;
+}
+
+export function nowLocalIso(): string {
+  return toLocalIso(new Date());
+}
+
+const DAY_KEY_RE = /^\d{4}-\d{2}-\d{2}$/;
+const TIME_RE = /^\d{2}:\d{2}$/;
+
+/**
+ * Build a local ISO timestamp from a day key ("YYYY-MM-DD") and a time ("HH:mm"),
+ * as produced by <input type="date"> / <input type="time">. Returns null when invalid.
+ */
+export function buildLocalIso(dayKey: string, time: string): string | null {
+  if (!DAY_KEY_RE.test(dayKey) || !TIME_RE.test(time)) return null;
+  const date = parseISO(`${dayKey}T${time}:00`);
+  if (Number.isNaN(date.getTime())) return null;
+  return toLocalIso(date);
+}
+
+/** True when the timestamp is after "now" (events in the future are not allowed). */
+export function isFutureIso(iso: string): boolean {
+  return new Date(iso).getTime() > Date.now();
 }
 
 export function todayKey(): string {

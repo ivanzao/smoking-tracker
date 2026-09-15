@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Cigarette, Leaf } from 'lucide-react';
+import { format } from 'date-fns';
 import {
   Drawer,
   DrawerContent,
@@ -19,14 +20,23 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { DateTimeFields } from '@/components/DateTimeFields';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { buildLocalIso, isFutureIso } from '@/lib/events';
 import { EventType } from '@/types';
+
+export interface NewEventInput {
+  type: EventType;
+  timestamp: string;
+  location?: string;
+  reason?: string;
+}
 
 interface NewEventDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   type: EventType | null;
-  onSubmit: (input: { type: EventType; location?: string; reason?: string }) => void;
+  onSubmit: (input: NewEventInput) => void;
 }
 
 const LABELS: Record<EventType, { title: string; icon: typeof Cigarette }> = {
@@ -35,21 +45,31 @@ const LABELS: Record<EventType, { title: string; icon: typeof Cigarette }> = {
 };
 
 export const NewEventDrawer = ({ open, onOpenChange, type, onSubmit }: NewEventDrawerProps) => {
+  const [date, setDate] = useState('');
+  const [time, setTime] = useState('');
   const [location, setLocation] = useState('');
   const [reason, setReason] = useState('');
   const isMobile = useIsMobile();
 
+  // Defaults are captured when the drawer opens, not when it is submitted
   useEffect(() => {
     if (open) {
+      const now = new Date();
+      setDate(format(now, 'yyyy-MM-dd'));
+      setTime(format(now, 'HH:mm'));
       setLocation('');
       setReason('');
     }
   }, [open]);
 
+  const timestamp = buildLocalIso(date, time);
+  const canSubmit = timestamp !== null && !isFutureIso(timestamp);
+
   const handleSubmit = () => {
-    if (!type) return;
+    if (!type || !timestamp || !canSubmit) return;
     onSubmit({
       type,
+      timestamp,
       location: location.trim() || undefined,
       reason: reason.trim() || undefined,
     });
@@ -61,6 +81,13 @@ export const NewEventDrawer = ({ open, onOpenChange, type, onSubmit }: NewEventD
 
   const formContent = (
     <div className="px-4 pb-2 space-y-3">
+      <DateTimeFields
+        idPrefix="new-event"
+        date={date}
+        time={time}
+        onDateChange={setDate}
+        onTimeChange={setTime}
+      />
       <div className="space-y-1.5">
         <Label htmlFor="new-event-location">Onde?</Label>
         <Input
@@ -99,7 +126,7 @@ export const NewEventDrawer = ({ open, onOpenChange, type, onSubmit }: NewEventD
           </DrawerHeader>
           {formContent}
           <DrawerFooter>
-            <Button onClick={handleSubmit}>Registrar</Button>
+            <Button onClick={handleSubmit} disabled={!canSubmit}>Registrar</Button>
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
@@ -121,7 +148,7 @@ export const NewEventDrawer = ({ open, onOpenChange, type, onSubmit }: NewEventD
         </DialogHeader>
         {formContent}
         <DialogFooter className="px-4 pt-2 flex-col gap-2">
-          <Button onClick={handleSubmit} className="w-full">Registrar</Button>
+          <Button onClick={handleSubmit} disabled={!canSubmit} className="w-full">Registrar</Button>
           <Button variant="outline" onClick={() => onOpenChange(false)} className="w-full">
             Cancelar
           </Button>

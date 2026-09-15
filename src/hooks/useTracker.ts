@@ -20,6 +20,7 @@ import {
   ImportError,
   mergeEvents,
   mergeGoals,
+  mergeStreakReset,
   parseImport,
   serializeExport,
 } from '@/lib/export';
@@ -27,13 +28,18 @@ import {
 const STORAGE_KEY = 'smoking-tracker';
 const DAY_KEY_RE = /^\d{4}-\d{2}-\d{2}$/;
 
+// Events are kept in chronological order (buildExport's dateRange relies on it);
+// custom timestamps can land anywhere, so re-sort after every insert/update.
+const byTimestamp = (a: TrackerEvent, b: TrackerEvent) =>
+  a.timestamp < b.timestamp ? -1 : a.timestamp > b.timestamp ? 1 : 0;
+
 export type UndoAction =
   | { type: 'restore-event'; event: TrackerEvent }
   | { type: 'remove-event'; eventId: string };
 
 export interface UseTrackerAPI {
   events: TrackerEvent[];
-  addEvent(input: { type: EventType; location?: string; reason?: string }): void;
+  addEvent(input: { type: EventType; location?: string; reason?: string; timestamp?: string }): void;
   removeEvent(id: string): void;
   updateEvent(id: string, patch: Partial<Omit<TrackerEvent, 'id'>>): void;
   clearDay(dayKey: string): void;
@@ -51,6 +57,10 @@ export interface UseTrackerAPI {
   getCurrentGoal(): GoalEntry | null;
   getDayGoalStatus(dayKey: string): DayGoalStatus;
   getCurrentStreak(): number;
+  /** Day key of the last manual streak reset, or null. */
+  streakResetDay: string | null;
+  /** Zero the streak from today — it resumes counting tomorrow. */
+  resetStreak(): void;
   getRollingAverage(days: number): number;
   getAverageDelta(days: number): number | null;
 }
@@ -68,28 +78,42 @@ function isValidGoalEntry(value: unknown): value is GoalEntry {
   return true;
 }
 
-function loadFromStorage(): { events: TrackerEvent[]; goals: GoalEntry[] } {
+interface LoadedState {
+  events: TrackerEvent[];
+  goals: GoalEntry[];
+  streakResetDay: string | null;
+}
+
+const EMPTY_STATE: LoadedState = { events: [], goals: [], streakResetDay: null };
+
+function loadFromStorage(): LoadedState {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return { events: [], goals: [] };
+    if (!raw) return EMPTY_STATE;
     const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return { events: [], goals: [] };
-    if (!Array.isArray(parsed.events)) return { events: [], goals: [] };
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return EMPTY_STATE;
+    if (!Array.isArray(parsed.events)) return EMPTY_STATE;
+
+    // Marker is optional and non-critical: a malformed one is dropped, not fatal
+    const streakResetDay =
+      typeof parsed.streakResetDay === 'string' && DAY_KEY_RE.test(parsed.streakResetDay)
+        ? parsed.streakResetDay
+        : null;
 
     if ('goals' in parsed) {
-      if (!Array.isArray(parsed.goals)) return { events: [], goals: [] };
+      if (!Array.isArray(parsed.goals)) return EMPTY_STATE;
       for (const g of parsed.goals) {
-        if (!isValidGoalEntry(g)) return { events: [], goals: [] };
+        if (!isValidGoalEntry(g)) return EMPTY_STATE;
       }
       const goals = (parsed.goals as GoalEntry[]).sort((a, b) =>
         a.effectiveFrom < b.effectiveFrom ? -1 : a.effectiveFrom > b.effectiveFrom ? 1 : 0
       );
-      return { events: parsed.events as TrackerEvent[], goals };
+      return { events: parsed.events as TrackerEvent[], goals, streakResetDay };
     }
 
-    return { events: parsed.events as TrackerEvent[], goals: [] };
+    return { events: parsed.events as TrackerEvent[], goals: [], streakResetDay };
   } catch {
-    return { events: [], goals: [] };
+    return EMPTY_STATE;
   }
 }
 
@@ -97,22 +121,23 @@ export function useTracker(): UseTrackerAPI {
   const [initial] = useState(loadFromStorage);
   const [events, setEvents] = useState<TrackerEvent[]>(initial.events);
   const [goals, setGoals] = useState<GoalEntry[]>(initial.goals);
+  const [streakResetDay, setStreakResetDay] = useState<string | null>(initial.streakResetDay);
   const [pendingUndo, setPendingUndo] = useState<UndoAction | null>(null);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ events, goals }));
-  }, [events, goals]);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ events, goals, streakResetDay }));
+  }, [events, goals, streakResetDay]);
 
   const addEvent = useCallback<UseTrackerAPI['addEvent']>((input) => {
     const id = uuidv4();
     const event: TrackerEvent = {
       id,
-      timestamp: nowLocalIso(),
+      timestamp: input.timestamp ?? nowLocalIso(),
       type: input.type,
       location: input.location?.trim() ? input.location.trim() : undefined,
       reason: input.reason?.trim() ? input.reason.trim() : undefined,
     };
-    setEvents((prev) => [...prev, event]);
+    setEvents((prev) => [...prev, event].sort(byTimestamp));
     setPendingUndo({ type: 'remove-event', eventId: id });
   }, []);
 
@@ -139,7 +164,9 @@ export function useTracker(): UseTrackerAPI {
   }, []);
 
   const updateEvent = useCallback<UseTrackerAPI['updateEvent']>((id, patch) => {
-    setEvents((prev) => prev.map((e) => (e.id === id ? { ...e, ...patch } : e)));
+    setEvents((prev) =>
+      prev.map((e) => (e.id === id ? { ...e, ...patch } : e)).sort(byTimestamp)
+    );
   }, []);
 
   const clearDay = useCallback<UseTrackerAPI['clearDay']>((dayKey) => {
@@ -198,9 +225,13 @@ export function useTracker(): UseTrackerAPI {
   );
 
   const getCurrentStreak = useCallback<UseTrackerAPI['getCurrentStreak']>(
-    () => calcCurrentStreak(events, goals),
-    [events, goals]
+    () => calcCurrentStreak(events, goals, streakResetDay),
+    [events, goals, streakResetDay]
   );
+
+  const resetStreak = useCallback<UseTrackerAPI['resetStreak']>(() => {
+    setStreakResetDay(todayKey());
+  }, []);
 
   const getRollingAverage = useCallback<UseTrackerAPI['getRollingAverage']>(
     (days) => calcRollingAverage(events, days),
@@ -213,8 +244,8 @@ export function useTracker(): UseTrackerAPI {
   );
 
   const exportEvents = useCallback<UseTrackerAPI['exportEvents']>(
-    () => serializeExport(events, goals),
-    [events, goals]
+    () => serializeExport(events, goals, streakResetDay),
+    [events, goals, streakResetDay]
   );
 
   const importEvents = useCallback<UseTrackerAPI['importEvents']>(
@@ -227,6 +258,7 @@ export function useTracker(): UseTrackerAPI {
       const goalResult = mergeGoals(goals, parsed.goals);
       setEvents(evtResult.merged);
       setGoals(goalResult.merged);
+      setStreakResetDay((current) => mergeStreakReset(current, parsed.streakResetDay));
       return {
         ok: true,
         added: evtResult.added,
@@ -256,6 +288,8 @@ export function useTracker(): UseTrackerAPI {
     getCurrentGoal,
     getDayGoalStatus,
     getCurrentStreak,
+    streakResetDay,
+    resetStreak,
     getRollingAverage,
     getAverageDelta,
   };

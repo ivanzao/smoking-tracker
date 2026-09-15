@@ -25,4 +25,6 @@ export interface GoalEntry {
 export interface StorageShape {
   events: TrackerEvent[];
   goals: GoalEntry[];
+  /** Day key of the last manual streak reset; that day and earlier never count. */
+  streakResetDay?: string | null;
 }

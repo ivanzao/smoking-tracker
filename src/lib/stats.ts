@@ -76,11 +76,18 @@ export function getMovingAverageSeries(
   }));
 }
 
+/**
+ * Consecutive days (ending today) within the goal.
+ * `streakResetDay` is a manual reset marker: that day and everything before it
+ * never count, so the streak only resumes from the following day.
+ */
 export function getCurrentStreak(
   events: TrackerEvent[],
   goals: GoalEntry[],
+  streakResetDay: string | null = null,
 ): number {
   const today = todayKey();
+  if (streakResetDay && today <= streakResetDay) return 0;
   const todayStatus = getDayGoalStatus(events, goals, today);
   if (todayStatus !== 'within') return 0;
 
@@ -89,6 +96,7 @@ export function getCurrentStreak(
   while (true) {
     cursor = subDays(cursor, 1);
     const dayKey = format(cursor, 'yyyy-MM-dd');
+    if (streakResetDay && dayKey <= streakResetDay) break;
     const status = getDayGoalStatus(events, goals, dayKey);
     if (status !== 'within') break;
     streak++;

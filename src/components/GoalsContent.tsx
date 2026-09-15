@@ -18,6 +18,7 @@ const IMPORT_ERROR_MESSAGES: Record<ImportError, string> = {
 
 export const GoalsContent = ({ tracker }: GoalsContentProps) => {
   const currentGoal = tracker.getCurrentGoal();
+  const streak = tracker.getCurrentStreak();
   const [goalValue, setGoalValue] = useState(currentGoal?.limit ?? 10);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -34,6 +35,12 @@ export const GoalsContent = ({ tracker }: GoalsContentProps) => {
     if (!window.confirm('Remover meta? O streak volta para zero.')) return;
     tracker.setGoal(null);
     toast.success('Meta removida');
+  };
+
+  const handleResetStreak = () => {
+    if (!window.confirm('Resetar streak? O contador volta para zero e recomeça amanhã.')) return;
+    tracker.resetStreak();
+    toast.success('Streak resetado');
   };
 
   const handleExport = () => {
@@ -117,6 +124,15 @@ export const GoalsContent = ({ tracker }: GoalsContentProps) => {
                 className="text-xs text-destructive hover:underline px-2 font-semibold"
               >
                 Remover
+              </button>
+            )}
+            {currentGoal && streak > 0 && (
+              <button
+                onClick={handleResetStreak}
+                aria-label="Resetar streak"
+                className="text-xs text-destructive hover:underline px-2 font-semibold"
+              >
+                Resetar streak
               </button>
             )}
           </div>

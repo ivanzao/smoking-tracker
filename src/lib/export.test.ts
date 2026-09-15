@@ -4,6 +4,7 @@ import {
   EXPORT_VERSION,
   mergeEvents,
   mergeGoals,
+  mergeStreakReset,
   parseImport,
   serializeExport,
 } from './export';
@@ -336,6 +337,66 @@ describe('buildExport — with goals', () => {
     const file = buildExport([], goals);
     expect(file.version).toBe(2);
     expect(file.goals).toEqual(goals);
+  });
+});
+
+describe('buildExport — streak reset', () => {
+  beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(new Date('2026-04-08T14:30:00Z')); });
+  afterEach(() => { vi.useRealTimers(); });
+
+  it('includes streakResetDay in export', () => {
+    expect(buildExport([], [], '2026-04-05').streakResetDay).toBe('2026-04-05');
+  });
+
+  it('defaults streakResetDay to null', () => {
+    expect(buildExport([], []).streakResetDay).toBeNull();
+  });
+});
+
+describe('parseImport — streak reset', () => {
+  const validV2Base = {
+    version: 2,
+    exportedAt: '2026-04-08T20:00:00-03:00',
+    eventCount: 0,
+    dateRange: { from: null, to: null },
+    events: [],
+    goals: [],
+  };
+
+  it('returns null when the field is absent (older files)', () => {
+    const result = parseImport(JSON.stringify(validV2Base));
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.streakResetDay).toBeNull();
+  });
+
+  it('accepts a valid day key', () => {
+    const result = parseImport(JSON.stringify({ ...validV2Base, streakResetDay: '2026-04-05' }));
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.streakResetDay).toBe('2026-04-05');
+  });
+
+  it('accepts an explicit null', () => {
+    const result = parseImport(JSON.stringify({ ...validV2Base, streakResetDay: null }));
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.streakResetDay).toBeNull();
+  });
+
+  it('rejects a malformed value', () => {
+    const result = parseImport(JSON.stringify({ ...validV2Base, streakResetDay: 'ontem' }));
+    expect(result).toEqual({ ok: false, error: 'invalid-shape' });
+  });
+});
+
+describe('mergeStreakReset', () => {
+  it('keeps the most recent marker', () => {
+    expect(mergeStreakReset('2026-04-05', '2026-04-07')).toBe('2026-04-07');
+    expect(mergeStreakReset('2026-04-07', '2026-04-05')).toBe('2026-04-07');
+  });
+
+  it('falls back to whichever side is set', () => {
+    expect(mergeStreakReset(null, '2026-04-07')).toBe('2026-04-07');
+    expect(mergeStreakReset('2026-04-07', null)).toBe('2026-04-07');
+    expect(mergeStreakReset(null, null)).toBeNull();
   });
 });
 
