@@ -9,7 +9,7 @@ interface GoalsContentProps {
 }
 
 const BRUTAL_BUTTON =
-  'py-2.5 px-2 border-2 border-border shadow-brutal-sm text-xs font-bold uppercase tracking-wider leading-tight active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-transform';
+  'min-w-0 flex items-center justify-center text-center py-2.5 px-1 border-2 border-border shadow-brutal-sm text-[11px] font-bold uppercase tracking-wide leading-tight active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-transform';
 
 const IMPORT_ERROR_MESSAGES: Record<ImportError, string> = {
   'invalid-json': 'Arquivo não é um JSON válido',
