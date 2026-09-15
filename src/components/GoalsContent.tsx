@@ -8,6 +8,9 @@ interface GoalsContentProps {
   tracker: UseTrackerAPI;
 }
 
+const BRUTAL_BUTTON =
+  'py-2.5 px-2 border-2 border-border shadow-brutal-sm text-xs font-bold uppercase tracking-wider leading-tight active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-transform';
+
 const IMPORT_ERROR_MESSAGES: Record<ImportError, string> = {
   'invalid-json': 'Arquivo não é um JSON válido',
   'invalid-shape': 'Arquivo não parece ser um backup do Smoking Tracker',
@@ -111,11 +114,11 @@ export const GoalsContent = ({ tracker }: GoalsContentProps) => {
             aria-label="Meta diária"
             className="w-full h-2 bg-muted appearance-none cursor-pointer accent-primary mb-4 border-2 border-border"
           />
-          <div className="flex items-center gap-3">
+          <div className="grid grid-cols-3 gap-3">
             <button
               onClick={handleSaveGoal}
               aria-label="Salvar meta"
-              className="flex-1 py-2.5 bg-primary text-primary-foreground border-2 border-border shadow-brutal-sm text-sm font-bold uppercase tracking-wider active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-transform"
+              className={BRUTAL_BUTTON + ' bg-primary text-primary-foreground'}
             >
               Salvar Meta
             </button>
@@ -123,7 +126,7 @@ export const GoalsContent = ({ tracker }: GoalsContentProps) => {
               <button
                 onClick={handleRemoveGoal}
                 aria-label="Remover meta"
-                className="text-xs text-destructive hover:underline px-2 font-semibold"
+                className={BRUTAL_BUTTON + ' bg-destructive text-destructive-foreground'}
               >
                 Remover
               </button>
@@ -132,9 +135,9 @@ export const GoalsContent = ({ tracker }: GoalsContentProps) => {
               <button
                 onClick={handleResetStreak}
                 aria-label="Resetar streak"
-                className="text-xs text-destructive hover:underline px-2 font-semibold"
+                className={BRUTAL_BUTTON + ' bg-destructive text-destructive-foreground'}
               >
-                Resetar streak
+                Resetar Streak
               </button>
             )}
           </div>
