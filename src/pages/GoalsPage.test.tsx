@@ -14,6 +14,7 @@ function makeTracker(overrides: Partial<UseTrackerAPI> = {}): UseTrackerAPI {
     getEventsForDay: vi.fn(() => []),
     getTodayTotals: vi.fn(() => ({ tobacco: 0, cannabis: 0 })),
     exportEvents: vi.fn(() => '{}'),
+    exportCsv: vi.fn(() => null),
     importEvents: vi.fn(() => ({
       ok: true, added: 0, skipped: 0, goalsAdded: 0, goalsSkipped: 0, notesAdded: 0, notesSkipped: 0,
     })),
@@ -109,5 +110,29 @@ describe('GoalsContent', () => {
     render(<GoalsContent tracker={tracker} />);
     fireEvent.click(screen.getByRole('button', { name: /exportar json/i }));
     expect(exportEvents).toHaveBeenCalled();
+  });
+
+  it('asks for a period before exporting CSV, then downloads it', () => {
+    const exportCsv = vi.fn(() => ({ csv: '\uFEFFData;Dia', fileName: 'smoking-tracker-2026-04-02_2026-04-08.csv' }));
+    const tracker = makeTracker({ exportCsv });
+    global.URL.createObjectURL = vi.fn(() => 'blob:mock');
+    global.URL.revokeObjectURL = vi.fn();
+    render(<GoalsContent tracker={tracker} />);
+    fireEvent.click(screen.getByRole('button', { name: /exportar csv/i }));
+    expect(exportCsv).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: /7 dias/i }));
+    expect(exportCsv).toHaveBeenCalledWith('7d');
+    expect(global.URL.createObjectURL).toHaveBeenCalled();
+  });
+
+  it('does not download when "Todos" has nothing to export', () => {
+    const exportCsv = vi.fn(() => null);
+    const tracker = makeTracker({ exportCsv });
+    global.URL.createObjectURL = vi.fn(() => 'blob:mock');
+    render(<GoalsContent tracker={tracker} />);
+    fireEvent.click(screen.getByRole('button', { name: /exportar csv/i }));
+    fireEvent.click(screen.getByRole('button', { name: /todos/i }));
+    expect(exportCsv).toHaveBeenCalledWith('all');
+    expect(global.URL.createObjectURL).not.toHaveBeenCalled();
   });
 });

@@ -3,6 +3,8 @@ import { toast } from 'sonner';
 import { UseTrackerAPI, ImportOutcome } from '@/hooks/useTracker';
 import { ImportError } from '@/lib/export';
 import { todayKey } from '@/lib/events';
+import { CsvPeriod } from '@/lib/csv';
+import { ExportCsvDrawer } from '@/components/ExportCsvDrawer';
 
 interface GoalsContentProps {
   tracker: UseTrackerAPI;
@@ -25,6 +27,7 @@ export const GoalsContent = ({ tracker }: GoalsContentProps) => {
   const streak = tracker.getCurrentStreak();
   const [goalValue, setGoalValue] = useState(currentGoal?.limit ?? 10);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [csvPickerOpen, setCsvPickerOpen] = useState(false);
 
   useEffect(() => {
     setGoalValue(currentGoal?.limit ?? 10);
@@ -47,18 +50,31 @@ export const GoalsContent = ({ tracker }: GoalsContentProps) => {
     toast.success('Streak resetado');
   };
 
-  const handleExport = () => {
-    const json = tracker.exportEvents();
-    const blob = new Blob([json], { type: 'application/json' });
+  const downloadFile = (content: string, mimeType: string, fileName: string) => {
+    const blob = new Blob([content], { type: mimeType });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `smoking-tracker-${todayKey()}.json`;
+    a.download = fileName;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  };
+
+  const handleExport = () => {
+    downloadFile(tracker.exportEvents(), 'application/json', `smoking-tracker-${todayKey()}.json`);
     toast.success('Backup exportado');
+  };
+
+  const handleExportCsv = (period: CsvPeriod) => {
+    const report = tracker.exportCsv(period);
+    if (!report) {
+      toast.error('Nenhum dado para exportar');
+      return;
+    }
+    downloadFile(report.csv, 'text/csv;charset=utf-8', report.fileName);
+    toast.success('CSV exportado');
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -162,6 +178,17 @@ export const GoalsContent = ({ tracker }: GoalsContentProps) => {
             </div>
           </button>
           <button
+            onClick={() => setCsvPickerOpen(true)}
+            aria-label="Exportar CSV"
+            className="w-full p-4 flex items-center gap-3 border-b-2 border-border hover:bg-muted text-left transition-colors"
+          >
+            <span className="material-symbols-outlined">table_view</span>
+            <div>
+              <p className="text-sm font-bold">Exportar CSV</p>
+              <p className="text-[10px] text-muted-foreground">Relatório dia a dia para compartilhar</p>
+            </div>
+          </button>
+          <button
             onClick={() => fileInputRef.current?.click()}
             aria-label="Importar JSON"
             className="w-full p-4 flex items-center gap-3 hover:bg-muted text-left transition-colors"
@@ -181,6 +208,12 @@ export const GoalsContent = ({ tracker }: GoalsContentProps) => {
           />
         </div>
       </section>
+
+      <ExportCsvDrawer
+        open={csvPickerOpen}
+        onOpenChange={setCsvPickerOpen}
+        onSelect={handleExportCsv}
+      />
 
       {/* Danger zone */}
       <section className="text-center">

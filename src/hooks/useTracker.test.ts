@@ -220,6 +220,37 @@ describe('useTracker — export/import', () => {
     expect(parsed.events).toEqual(seed);
   });
 
+});
+
+describe('useTracker — exportCsv', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-04-08T14:30:00'));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('builds a CSV report for the period, named by its interval', () => {
+    const seed: TrackerEvent[] = [
+      { id: 'a', timestamp: '2026-04-07T10:00:00-03:00', type: 'tobacco', reason: 'café' },
+    ];
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ events: seed }));
+    const { result } = renderHook(() => useTracker());
+
+    const report = result.current.exportCsv('7d');
+    expect(report?.fileName).toBe('smoking-tracker-2026-04-02_2026-04-08.csv');
+    expect(report?.csv).toContain('07/04/2026;ter;;1;1;0;sem meta;10:00 [T] café;10:00 [T];');
+  });
+
+  it('returns null for "all" when there is no history', () => {
+    const { result } = renderHook(() => useTracker());
+    expect(result.current.exportCsv('all')).toBeNull();
+  });
+});
+
+describe('useTracker — import', () => {
   it('importEvents merges new events into the existing state', () => {
     const seed: TrackerEvent[] = [
       { id: 'a', timestamp: '2026-04-08T10:00:00-03:00', type: 'tobacco' },

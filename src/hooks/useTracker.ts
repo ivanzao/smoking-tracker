@@ -24,6 +24,7 @@ import {
   parseImport,
   serializeExport,
 } from '@/lib/export';
+import { CsvPeriod, csvFileName, resolveCsvRange, serializeCsv } from '@/lib/csv';
 import {
   addDayNote as calcAddDayNote,
   updateDayNote as calcUpdateDayNote,
@@ -45,6 +46,12 @@ export type UndoAction =
   | { type: 'restore-event'; event: TrackerEvent }
   | { type: 'remove-event'; eventId: string };
 
+/** A day-by-day CSV report ready to download. */
+export interface CsvReport {
+  csv: string;
+  fileName: string;
+}
+
 export interface UseTrackerAPI {
   events: TrackerEvent[];
   addEvent(input: { type: EventType; location?: string; reason?: string; timestamp?: string }): void;
@@ -55,6 +62,8 @@ export interface UseTrackerAPI {
   getEventsForDay(dayKey: string): TrackerEvent[];
   getTodayTotals(): DayTotals;
   exportEvents(): string;
+  /** Null only for 'all' with no history — fixed periods always produce a report. */
+  exportCsv(period: CsvPeriod): CsvReport | null;
   importEvents(raw: string): ImportOutcome;
 
   pendingUndo: UndoAction | null;
@@ -308,6 +317,15 @@ export function useTracker(): UseTrackerAPI {
     [events, goals, streakResetDay, days]
   );
 
+  const exportCsv = useCallback<UseTrackerAPI['exportCsv']>(
+    (period) => {
+      const range = resolveCsvRange(period, events, days);
+      if (!range) return null;
+      return { csv: serializeCsv(events, goals, days, range), fileName: csvFileName(range) };
+    },
+    [events, goals, days]
+  );
+
   const importEvents = useCallback<UseTrackerAPI['importEvents']>(
     (raw) => {
       const parsed = parseImport(raw);
@@ -344,6 +362,7 @@ export function useTracker(): UseTrackerAPI {
     getEventsForDay,
     getTodayTotals,
     exportEvents,
+    exportCsv,
     importEvents,
     pendingUndo,
     executeUndo,
