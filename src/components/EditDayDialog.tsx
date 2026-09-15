@@ -12,8 +12,9 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { EditEventDrawer } from './EditEventDrawer';
+import { DayNotes } from './DayNotes';
 import { getDayKey } from '@/lib/events';
-import { TrackerEvent } from '@/types';
+import { DayNote, TrackerEvent } from '@/types';
 
 interface EditDayDialogProps {
   open: boolean;
@@ -24,6 +25,11 @@ interface EditDayDialogProps {
   onClearDay: (dayKey: string) => void;
   onUndo: () => void;
   onUpdateEvent: (id: string, patch: Partial<Omit<TrackerEvent, 'id'>>) => void;
+  notes: DayNote[];
+  onAddNote: (dayKey: string, text: string) => void;
+  onUpdateNote: (dayKey: string, noteId: string, text: string) => void;
+  onRemoveNote: (dayKey: string, noteId: string) => void;
+  onRestoreNote: (dayKey: string, note: DayNote) => void;
 }
 
 export const EditDayDialog = ({
@@ -35,9 +41,15 @@ export const EditDayDialog = ({
   onClearDay,
   onUndo,
   onUpdateEvent,
+  notes,
+  onAddNote,
+  onUpdateNote,
+  onRemoveNote,
+  onRestoreNote,
 }: EditDayDialogProps) => {
   const [confirmClear, setConfirmClear] = useState(false);
   const [editingEvent, setEditingEvent] = useState<TrackerEvent | null>(null);
+  const [editingNote, setEditingNote] = useState(false);
 
   const prettyDate = dayKey
     ? format(parseISO(dayKey + 'T00:00:00'), 'dd/MM/yyyy')
@@ -51,6 +63,21 @@ export const EditDayDialog = ({
     if (patch.timestamp && dayKey && getDayKey(patch.timestamp) !== dayKey) {
       toast(`Movido para ${format(parseISO(patch.timestamp), 'dd/MM')}`);
     }
+  };
+
+  // The undo toast carries the note itself, so it never collides with the events' pendingUndo slot
+  const handleRemoveNote = (noteId: string) => {
+    if (!dayKey) return;
+    const note = notes.find((n) => n.id === noteId);
+    if (!note) return;
+    onRemoveNote(dayKey, noteId);
+    toast('Anotação removida', {
+      duration: 5000,
+      action: {
+        label: 'Desfazer',
+        onClick: () => onRestoreNote(dayKey, note),
+      },
+    });
   };
 
   const handleClearDay = () => {
@@ -71,17 +98,26 @@ export const EditDayDialog = ({
         if (!next) {
           setConfirmClear(false);
           setEditingEvent(null);
+          setEditingNote(false);
         }
         onOpenChange(next);
       }}
     >
-      <DialogContent className="sm:max-w-[480px]">
+      <DialogContent
+        className="sm:max-w-[480px]"
+        // Radix listens for Escape on document (capture); while a note is being edited,
+        // Escape belongs to the inline input, not to the dialog
+        onEscapeKeyDown={(e) => {
+          if (editingNote) e.preventDefault();
+        }}
+      >
         <DialogHeader>
           <DialogTitle>Dia {prettyDate}</DialogTitle>
           <DialogDescription>
             {sorted.length === 0
               ? 'Nenhum evento registrado neste dia.'
               : `${sorted.length} evento(s) registrado(s)`}
+            {notes.length > 0 && ` · ${notes.length} anotação(ões)`}
           </DialogDescription>
         </DialogHeader>
 
@@ -128,6 +164,17 @@ export const EditDayDialog = ({
             );
           })}
         </div>
+
+        {dayKey && (
+          <DayNotes
+            dayKey={dayKey}
+            notes={notes}
+            onEditingChange={setEditingNote}
+            onAdd={(text) => onAddNote(dayKey, text)}
+            onUpdate={(noteId, text) => onUpdateNote(dayKey, noteId, text)}
+            onRemove={handleRemoveNote}
+          />
+        )}
 
         <DialogFooter className="flex-col sm:flex-row sm:justify-between gap-2">
           {sorted.length > 0 && (

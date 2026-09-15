@@ -14,7 +14,9 @@ function makeTracker(overrides: Partial<UseTrackerAPI> = {}): UseTrackerAPI {
     getEventsForDay: vi.fn(() => []),
     getTodayTotals: vi.fn(() => ({ tobacco: 0, cannabis: 0 })),
     exportEvents: vi.fn(() => '{}'),
-    importEvents: vi.fn(() => ({ ok: true, added: 0, skipped: 0, goalsAdded: 0, goalsSkipped: 0 })),
+    importEvents: vi.fn(() => ({
+      ok: true, added: 0, skipped: 0, goalsAdded: 0, goalsSkipped: 0, notesAdded: 0, notesSkipped: 0,
+    })),
     pendingUndo: null,
     executeUndo: vi.fn(),
     goals: [],
@@ -26,6 +28,12 @@ function makeTracker(overrides: Partial<UseTrackerAPI> = {}): UseTrackerAPI {
     resetStreak: vi.fn(),
     getRollingAverage: vi.fn(() => 0),
     getAverageDelta: vi.fn(() => null),
+    days: [],
+    getDayNotes: vi.fn(() => []),
+    addDayNote: vi.fn(() => null),
+    updateDayNote: vi.fn(),
+    removeDayNote: vi.fn(),
+    restoreDayNote: vi.fn(),
     ...overrides,
   } as UseTrackerAPI;
 }

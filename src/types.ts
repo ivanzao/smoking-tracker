@@ -22,9 +22,24 @@ export interface GoalEntry {
   effectiveFrom: string;
 }
 
+export interface DayNote {
+  id: string;
+  text: string;
+  /** ISO 8601 with local offset, same format as TrackerEvent.timestamp */
+  createdAt: string;
+}
+
+/** Per-day metadata. Only persisted while it has at least one note. */
+export interface DayRecord {
+  /** Day key "YYYY-MM-DD" */
+  dayKey: string;
+  notes: DayNote[];
+}
+
 export interface StorageShape {
   events: TrackerEvent[];
   goals: GoalEntry[];
+  days?: DayRecord[];
   /** Day key of the last manual streak reset; that day and earlier never count. */
   streakResetDay?: string | null;
 }

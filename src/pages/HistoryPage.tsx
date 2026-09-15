@@ -134,6 +134,7 @@ export const HistoryPage = ({ tracker, onOpenEditDay }: HistoryPageProps) => {
                 getDayGoalStatus={tracker.getDayGoalStatus}
                 onDayClick={onOpenEditDay}
                 todayStr={todayStr}
+                hasNotes={tracker.getDayNotes(dayKey).length > 0}
               />
             ))}
           </div>

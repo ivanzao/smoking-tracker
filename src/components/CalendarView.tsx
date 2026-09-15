@@ -28,6 +28,7 @@ export interface DayCellProps {
   getDayGoalStatus: (dayKey: string) => DayGoalStatus;
   onDayClick: (dayKey: string) => void;
   todayStr: string;
+  hasNotes?: boolean;
 }
 
 export const DayCell = ({
@@ -36,6 +37,7 @@ export const DayCell = ({
   getDayGoalStatus,
   onDayClick,
   todayStr,
+  hasNotes = false,
 }: DayCellProps) => {
   const totals = getDayTotals(dayKey);
   const total = totals.tobacco + totals.cannabis;
@@ -59,6 +61,14 @@ export const DayCell = ({
         total === 0 && goalStatus === 'no-goal' && 'opacity-60',
       )}
     >
+      {hasNotes && (
+        <span
+          aria-label="Dia com anotações"
+          className="material-symbols-outlined absolute top-0.5 right-0.5 text-[0.7rem] leading-none"
+        >
+          sticky_note_2
+        </span>
+      )}
       <div className="text-[0.55rem] font-bold uppercase">{weekday}</div>
       <div className="text-[0.7rem] font-bold">{format(date, 'dd')}</div>
       {total > 0 ? (

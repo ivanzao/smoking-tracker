@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useTracker } from './useTracker';
-import { TrackerEvent, GoalEntry } from '@/types';
+import { TrackerEvent, GoalEntry, DayRecord } from '@/types';
 
 const STORAGE_KEY = 'smoking-tracker';
 
@@ -504,6 +504,91 @@ describe('useTracker — streak reset', () => {
 
     act(() => { result.current.importEvents(JSON.stringify({ ...file, streakResetDay: '2026-04-02' })); });
     expect(result.current.streakResetDay).toBe('2026-04-09');
+  });
+});
+
+describe('useTracker — day notes', () => {
+  beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(new Date('2026-04-08T14:00:00Z')); });
+  afterEach(() => { vi.useRealTimers(); });
+
+  it('starts with no days when storage has none', () => {
+    const { result } = renderHook(() => useTracker());
+    expect(result.current.days).toEqual([]);
+    expect(result.current.getDayNotes('2026-04-08')).toEqual([]);
+  });
+
+  it('loads valid days from storage and drops malformed records', () => {
+    const days: DayRecord[] = [
+      { dayKey: '2026-04-08', notes: [{ id: 'n1', text: 'a', createdAt: '2026-04-08T10:00:00-03:00' }] },
+    ];
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ events: [], days: [...days, { dayKey: 'x' }] }));
+    const { result } = renderHook(() => useTracker());
+    expect(result.current.days).toEqual(days);
+  });
+
+  it('addDayNote creates a note with id and createdAt, trims text, and persists', () => {
+    const { result } = renderHook(() => useTracker());
+    let created: ReturnType<typeof result.current.addDayNote>;
+    act(() => { created = result.current.addDayNote('2026-04-08', '  dia estressante  '); });
+    expect(created!.id).toMatch(/^[0-9a-f-]{36}$/);
+    expect(created!.text).toBe('dia estressante');
+    expect(created!.createdAt).toMatch(/^2026-04-08T/);
+    expect(result.current.getDayNotes('2026-04-08')).toEqual([created!]);
+    expect(JSON.parse(localStorage.getItem(STORAGE_KEY)!).days).toEqual([
+      { dayKey: '2026-04-08', notes: [created!] },
+    ]);
+  });
+
+  it('addDayNote ignores empty text', () => {
+    const { result } = renderHook(() => useTracker());
+    let created: ReturnType<typeof result.current.addDayNote>;
+    act(() => { created = result.current.addDayNote('2026-04-08', '   '); });
+    expect(created!).toBeNull();
+    expect(result.current.days).toEqual([]);
+  });
+
+  it('updateDayNote replaces text, keeps previous text when empty', () => {
+    const { result } = renderHook(() => useTracker());
+    let created: ReturnType<typeof result.current.addDayNote>;
+    act(() => { created = result.current.addDayNote('2026-04-08', 'old'); });
+    act(() => { result.current.updateDayNote('2026-04-08', created!.id, ' new '); });
+    expect(result.current.getDayNotes('2026-04-08')[0].text).toBe('new');
+    act(() => { result.current.updateDayNote('2026-04-08', created!.id, '  '); });
+    expect(result.current.getDayNotes('2026-04-08')[0].text).toBe('new');
+  });
+
+  it('removeDayNote drops the note and restoreDayNote puts it back with the same id', () => {
+    const { result } = renderHook(() => useTracker());
+    let created: ReturnType<typeof result.current.addDayNote>;
+    act(() => { created = result.current.addDayNote('2026-04-08', 'a'); });
+    act(() => { result.current.removeDayNote('2026-04-08', created!.id); });
+    expect(result.current.days).toEqual([]);
+    act(() => { result.current.restoreDayNote('2026-04-08', created!); });
+    expect(result.current.getDayNotes('2026-04-08')).toEqual([created!]);
+  });
+
+  it('round-trips days through export/import, merging by note id', () => {
+    const { result } = renderHook(() => useTracker());
+    act(() => { result.current.addDayNote('2026-04-08', 'mine'); });
+    const exported = JSON.parse(result.current.exportEvents());
+    expect(exported.days).toHaveLength(1);
+
+    const file = {
+      version: 2,
+      exportedAt: '2026-04-08T20:00:00-03:00',
+      eventCount: 0,
+      dateRange: { from: null, to: null },
+      events: [],
+      goals: [],
+      days: [
+        { dayKey: '2026-04-08', notes: [...exported.days[0].notes, { id: 'n2', text: 'theirs', createdAt: '2026-04-08T09:00:00-03:00' }] },
+      ],
+    };
+    let outcome: ReturnType<typeof result.current.importEvents>;
+    act(() => { outcome = result.current.importEvents(JSON.stringify(file)); });
+    expect(outcome!.ok).toBe(true);
+    if (outcome!.ok) { expect(outcome!.notesAdded).toBe(1); expect(outcome!.notesSkipped).toBe(1); }
+    expect(result.current.getDayNotes('2026-04-08').map((n) => n.text)).toEqual(['theirs', 'mine']);
   });
 });
 

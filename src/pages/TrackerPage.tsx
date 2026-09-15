@@ -9,9 +9,15 @@ interface TrackerPageProps {
   tracker: UseTrackerAPI;
   onOpenNewEvent: (type: EventType) => void;
   onOpenEditEvent: (event: TrackerEvent) => void;
+  onOpenEditDay: (dayKey: string) => void;
 }
 
-export const TrackerPage = ({ tracker, onOpenNewEvent, onOpenEditEvent }: TrackerPageProps) => {
+export const TrackerPage = ({
+  tracker,
+  onOpenNewEvent,
+  onOpenEditEvent,
+  onOpenEditDay,
+}: TrackerPageProps) => {
   const totals = tracker.getTodayTotals();
   const todayTotal = totals.tobacco + totals.cannabis;
   const currentGoal = tracker.getCurrentGoal();
@@ -21,7 +27,13 @@ export const TrackerPage = ({ tracker, onOpenNewEvent, onOpenEditEvent }: Tracke
   const weekDays = getDaysInRange(subDays(today, 6), today);
   const weekTotals = weekDays.map((d) => {
     const t = tracker.getDayTotals(d);
-    return { dayKey: d, total: t.tobacco + t.cannabis, tobacco: t.tobacco, cannabis: t.cannabis };
+    return {
+      dayKey: d,
+      total: t.tobacco + t.cannabis,
+      tobacco: t.tobacco,
+      cannabis: t.cannabis,
+      hasNotes: tracker.getDayNotes(d).length > 0,
+    };
   });
   const maxTotal = Math.max(1, ...weekTotals.map((w) => w.total));
 
@@ -51,9 +63,11 @@ export const TrackerPage = ({ tracker, onOpenNewEvent, onOpenEditEvent }: Tracke
           : idx === 1
           ? 'Ontem'
           : format(parseISO(dayKey + 'T00:00:00'), 'dd/MM', { locale: ptBR });
-      return { dayKey, events, heading };
+      const notes = tracker.getDayNotes(dayKey);
+      return { dayKey, events, heading, notes };
     })
-    .filter((g) => g.events.length > 0);
+    // A day with only notes still shows up, otherwise the note would be invisible here
+    .filter((g) => g.events.length > 0 || g.notes.length > 0);
 
   return (
     <>
@@ -148,16 +162,29 @@ export const TrackerPage = ({ tracker, onOpenNewEvent, onOpenEditEvent }: Tracke
               Últimos 7 Dias
             </p>
             <div className="h-24 flex items-end justify-between gap-1">
-              {weekTotals.map(({ dayKey, total, tobacco, cannabis }) => {
+              {weekTotals.map(({ dayKey, total, tobacco, cannabis, hasNotes }) => {
                 const heightPct = total > 0 ? Math.max(5, (total / maxTotal) * 100) : 3;
                 const bg =
                   cannabis > tobacco ? 'bg-foreground' : tobacco > 0 ? 'bg-primary' : 'bg-muted';
                 return (
-                  <div
+                  <button
                     key={dayKey}
-                    className={`w-full border-2 border-border ${bg}`}
-                    style={{ height: `${heightPct}%` }}
-                  />
+                    type="button"
+                    onClick={() => onOpenEditDay(dayKey)}
+                    aria-label={`Abrir dia ${format(parseISO(dayKey + 'T00:00:00'), 'dd/MM')}`}
+                    className="w-full h-full flex flex-col items-center justify-end gap-1"
+                  >
+                    {hasNotes && (
+                      <span
+                        aria-label="Dia com anotações"
+                        className="w-1.5 h-1.5 bg-foreground border border-border"
+                      />
+                    )}
+                    <div
+                      className={`w-full border-2 border-border ${bg}`}
+                      style={{ height: `${heightPct}%` }}
+                    />
+                  </button>
                 );
               })}
             </div>
@@ -180,14 +207,35 @@ export const TrackerPage = ({ tracker, onOpenNewEvent, onOpenEditEvent }: Tracke
           Logs Recentes
         </h2>
         {recentGroups.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Nenhum registro nos últimos 3 dias.</p>
+          <p className="text-sm text-muted-foreground">Nenhum registro ou anotação nos últimos 3 dias.</p>
         ) : (
           <div className="space-y-8">
-            {recentGroups.map(({ dayKey, events, heading }) => (
+            {recentGroups.map(({ dayKey, events, heading, notes }) => (
               <section key={dayKey}>
-                <p className="text-xs font-bold uppercase tracking-wider mb-3">
+                <button
+                  type="button"
+                  onClick={() => onOpenEditDay(dayKey)}
+                  className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider mb-3 hover:underline"
+                >
                   {heading}
-                </p>
+                  {notes.length > 0 && (
+                    <span
+                      aria-label="Dia com anotações"
+                      className="material-symbols-outlined text-sm leading-none"
+                    >
+                      sticky_note_2
+                    </span>
+                  )}
+                </button>
+                {notes.length > 0 && (
+                  <ul className="mb-3 space-y-1">
+                    {notes.map((note) => (
+                      <li key={note.id} className="text-xs text-muted-foreground italic">
+                        {note.text}
+                      </li>
+                    ))}
+                  </ul>
+                )}
                 <div className="space-y-2">
                   {events.map((event) => {
                     const isCannabis = event.type === 'cannabis';

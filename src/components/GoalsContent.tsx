@@ -14,6 +14,7 @@ const IMPORT_ERROR_MESSAGES: Record<ImportError, string> = {
   'unsupported-version': 'Versão do arquivo não suportada',
   'invalid-events': 'Arquivo contém eventos inválidos',
   'invalid-goals': 'Arquivo contém metas inválidas',
+  'invalid-days': 'Arquivo contém anotações inválidas',
 };
 
 export const GoalsContent = ({ tracker }: GoalsContentProps) => {
@@ -69,6 +70,7 @@ export const GoalsContent = ({ tracker }: GoalsContentProps) => {
           parts.push(`${result.added} eventos importados (${result.skipped} duplicados)`);
         }
         if (result.goalsAdded > 0) parts.push(`${result.goalsAdded} metas importadas`);
+        if (result.notesAdded > 0) parts.push(`${result.notesAdded} anotações importadas`);
         toast.success(parts.join('. ') || 'Nenhum dado novo encontrado');
       } else {
         toast.error(IMPORT_ERROR_MESSAGES[result.error]);

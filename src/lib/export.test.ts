@@ -387,6 +387,50 @@ describe('parseImport — streak reset', () => {
   });
 });
 
+describe('parseImport — days', () => {
+  const validV2Base = {
+    version: 2,
+    exportedAt: '2026-04-08T20:00:00-03:00',
+    eventCount: 0,
+    dateRange: { from: null, to: null },
+    events: [],
+    goals: [],
+  };
+
+  it('returns empty days when the field is absent (older files)', () => {
+    const result = parseImport(JSON.stringify(validV2Base));
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.days).toEqual([]);
+  });
+
+  it('accepts valid day records', () => {
+    const days = [
+      { dayKey: '2026-04-08', notes: [{ id: 'n1', text: 'dia difícil', createdAt: '2026-04-08T10:00:00-03:00' }] },
+    ];
+    const result = parseImport(JSON.stringify({ ...validV2Base, days }));
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.days).toEqual(days);
+  });
+
+  it('rejects malformed days', () => {
+    expect(parseImport(JSON.stringify({ ...validV2Base, days: 'x' }))).toEqual({ ok: false, error: 'invalid-days' });
+    expect(
+      parseImport(JSON.stringify({ ...validV2Base, days: [{ dayKey: 'x', notes: [] }] }))
+    ).toEqual({ ok: false, error: 'invalid-days' });
+  });
+});
+
+describe('buildExport — days', () => {
+  beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(new Date('2026-04-08T14:30:00Z')); });
+  afterEach(() => { vi.useRealTimers(); });
+
+  it('includes days in export, defaulting to empty', () => {
+    const days = [{ dayKey: '2026-04-08', notes: [{ id: 'n1', text: 'a', createdAt: '2026-04-08T10:00:00-03:00' }] }];
+    expect(buildExport([], [], null, days).days).toEqual(days);
+    expect(buildExport([]).days).toEqual([]);
+  });
+});
+
 describe('mergeStreakReset', () => {
   it('keeps the most recent marker', () => {
     expect(mergeStreakReset('2026-04-05', '2026-04-07')).toBe('2026-04-07');

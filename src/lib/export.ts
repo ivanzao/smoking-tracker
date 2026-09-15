@@ -1,5 +1,6 @@
-import { TrackerEvent, GoalEntry } from '@/types';
+import { TrackerEvent, GoalEntry, DayRecord } from '@/types';
 import { getDayKey, nowLocalIso } from './events';
+import { isValidDayRecord } from './days';
 
 export const EXPORT_VERSION = 2;
 
@@ -15,14 +16,17 @@ export interface ExportFile {
   goals: GoalEntry[];
   /** Manual streak reset marker (day key), see getCurrentStreak. */
   streakResetDay: string | null;
+  /** Per-day notes. */
+  days: DayRecord[];
 }
 
 export function serializeExport(
   events: TrackerEvent[],
   goals: GoalEntry[] = [],
   streakResetDay: string | null = null,
+  days: DayRecord[] = [],
 ): string {
-  return JSON.stringify(buildExport(events, goals, streakResetDay), null, 2);
+  return JSON.stringify(buildExport(events, goals, streakResetDay, days), null, 2);
 }
 
 export type ImportError =
@@ -30,7 +34,8 @@ export type ImportError =
   | 'invalid-shape'
   | 'unsupported-version'
   | 'invalid-events'
-  | 'invalid-goals';
+  | 'invalid-goals'
+  | 'invalid-days';
 
 export type ParseResult =
   | {
@@ -38,6 +43,7 @@ export type ParseResult =
       events: TrackerEvent[];
       goals: GoalEntry[];
       streakResetDay: string | null;
+      days: DayRecord[];
       exportedAt: string;
       eventCount: number;
     }
@@ -123,11 +129,21 @@ export function parseImport(raw: string): ParseResult {
     streakResetDay = parsed.streakResetDay;
   }
 
+  // Optional field — absent in files exported before day notes existed
+  let days: DayRecord[] = [];
+  if (parsed.days !== undefined) {
+    if (!Array.isArray(parsed.days) || !parsed.days.every(isValidDayRecord)) {
+      return { ok: false, error: 'invalid-days' };
+    }
+    days = parsed.days as DayRecord[];
+  }
+
   return {
     ok: true,
     events: parsed.events as TrackerEvent[],
     goals,
     streakResetDay,
+    days,
     exportedAt: typeof parsed.exportedAt === 'string' ? parsed.exportedAt : '',
     eventCount: typeof parsed.eventCount === 'number' ? parsed.eventCount : parsed.events.length,
   };
@@ -201,6 +217,7 @@ export function buildExport(
   events: TrackerEvent[],
   goals: GoalEntry[] = [],
   streakResetDay: string | null = null,
+  days: DayRecord[] = [],
 ): ExportFile {
   const from = events.length > 0 ? getDayKey(events[0].timestamp) : null;
   const to = events.length > 0 ? getDayKey(events[events.length - 1].timestamp) : null;
@@ -212,5 +229,6 @@ export function buildExport(
     events,
     goals,
     streakResetDay,
+    days,
   };
 }

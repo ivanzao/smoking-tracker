@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { EventType, GoalEntry, TrackerEvent, DayTotals } from '@/types';
+import { EventType, GoalEntry, TrackerEvent, DayTotals, DayNote, DayRecord } from '@/types';
 import {
   getDayKey,
   getDayTotals as calcDayTotals,
@@ -24,6 +24,14 @@ import {
   parseImport,
   serializeExport,
 } from '@/lib/export';
+import {
+  addDayNote as calcAddDayNote,
+  updateDayNote as calcUpdateDayNote,
+  removeDayNote as calcRemoveDayNote,
+  getDayNotes as calcGetDayNotes,
+  isValidDayRecord,
+  mergeDays,
+} from '@/lib/days';
 
 const STORAGE_KEY = 'smoking-tracker';
 const DAY_KEY_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -63,10 +71,28 @@ export interface UseTrackerAPI {
   resetStreak(): void;
   getRollingAverage(days: number): number;
   getAverageDelta(days: number): number | null;
+
+  days: DayRecord[];
+  getDayNotes(dayKey: string): DayNote[];
+  /** Returns the created note, or null when the text is blank. */
+  addDayNote(dayKey: string, text: string): DayNote | null;
+  /** Blank text is ignored — deleting is the trash button's job. */
+  updateDayNote(dayKey: string, noteId: string, text: string): void;
+  removeDayNote(dayKey: string, noteId: string): void;
+  /** Re-insert a removed note as-is (same id/createdAt); used by the undo toast. */
+  restoreDayNote(dayKey: string, note: DayNote): void;
 }
 
 export type ImportOutcome =
-  | { ok: true; added: number; skipped: number; goalsAdded: number; goalsSkipped: number }
+  | {
+      ok: true;
+      added: number;
+      skipped: number;
+      goalsAdded: number;
+      goalsSkipped: number;
+      notesAdded: number;
+      notesSkipped: number;
+    }
   | { ok: false; error: ImportError };
 
 function isValidGoalEntry(value: unknown): value is GoalEntry {
@@ -82,9 +108,10 @@ interface LoadedState {
   events: TrackerEvent[];
   goals: GoalEntry[];
   streakResetDay: string | null;
+  days: DayRecord[];
 }
 
-const EMPTY_STATE: LoadedState = { events: [], goals: [], streakResetDay: null };
+const EMPTY_STATE: LoadedState = { events: [], goals: [], streakResetDay: null, days: [] };
 
 function loadFromStorage(): LoadedState {
   try {
@@ -100,6 +127,11 @@ function loadFromStorage(): LoadedState {
         ? parsed.streakResetDay
         : null;
 
+    // Same for day notes: malformed records are dropped one by one
+    const days: DayRecord[] = Array.isArray(parsed.days)
+      ? parsed.days.filter(isValidDayRecord)
+      : [];
+
     if ('goals' in parsed) {
       if (!Array.isArray(parsed.goals)) return EMPTY_STATE;
       for (const g of parsed.goals) {
@@ -108,10 +140,10 @@ function loadFromStorage(): LoadedState {
       const goals = (parsed.goals as GoalEntry[]).sort((a, b) =>
         a.effectiveFrom < b.effectiveFrom ? -1 : a.effectiveFrom > b.effectiveFrom ? 1 : 0
       );
-      return { events: parsed.events as TrackerEvent[], goals, streakResetDay };
+      return { events: parsed.events as TrackerEvent[], goals, streakResetDay, days };
     }
 
-    return { events: parsed.events as TrackerEvent[], goals: [], streakResetDay };
+    return { events: parsed.events as TrackerEvent[], goals: [], streakResetDay, days };
   } catch {
     return EMPTY_STATE;
   }
@@ -122,11 +154,12 @@ export function useTracker(): UseTrackerAPI {
   const [events, setEvents] = useState<TrackerEvent[]>(initial.events);
   const [goals, setGoals] = useState<GoalEntry[]>(initial.goals);
   const [streakResetDay, setStreakResetDay] = useState<string | null>(initial.streakResetDay);
+  const [days, setDays] = useState<DayRecord[]>(initial.days);
   const [pendingUndo, setPendingUndo] = useState<UndoAction | null>(null);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ events, goals, streakResetDay }));
-  }, [events, goals, streakResetDay]);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ events, goals, streakResetDay, days }));
+  }, [events, goals, streakResetDay, days]);
 
   const addEvent = useCallback<UseTrackerAPI['addEvent']>((input) => {
     const id = uuidv4();
@@ -243,9 +276,36 @@ export function useTracker(): UseTrackerAPI {
     [events]
   );
 
+  const getDayNotes = useCallback<UseTrackerAPI['getDayNotes']>(
+    (dayKey) => calcGetDayNotes(days, dayKey),
+    [days]
+  );
+
+  const addDayNote = useCallback<UseTrackerAPI['addDayNote']>((dayKey, text) => {
+    const trimmed = text.trim();
+    if (!trimmed) return null;
+    const note: DayNote = { id: uuidv4(), text: trimmed, createdAt: nowLocalIso() };
+    setDays((prev) => calcAddDayNote(prev, dayKey, note));
+    return note;
+  }, []);
+
+  const updateDayNote = useCallback<UseTrackerAPI['updateDayNote']>((dayKey, noteId, text) => {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    setDays((prev) => calcUpdateDayNote(prev, dayKey, noteId, trimmed));
+  }, []);
+
+  const removeDayNote = useCallback<UseTrackerAPI['removeDayNote']>((dayKey, noteId) => {
+    setDays((prev) => calcRemoveDayNote(prev, dayKey, noteId));
+  }, []);
+
+  const restoreDayNote = useCallback<UseTrackerAPI['restoreDayNote']>((dayKey, note) => {
+    setDays((prev) => calcAddDayNote(prev, dayKey, note));
+  }, []);
+
   const exportEvents = useCallback<UseTrackerAPI['exportEvents']>(
-    () => serializeExport(events, goals, streakResetDay),
-    [events, goals, streakResetDay]
+    () => serializeExport(events, goals, streakResetDay, days),
+    [events, goals, streakResetDay, days]
   );
 
   const importEvents = useCallback<UseTrackerAPI['importEvents']>(
@@ -256,18 +316,22 @@ export function useTracker(): UseTrackerAPI {
       }
       const evtResult = mergeEvents(events, parsed.events);
       const goalResult = mergeGoals(goals, parsed.goals);
+      const daysResult = mergeDays(days, parsed.days);
       setEvents(evtResult.merged);
       setGoals(goalResult.merged);
       setStreakResetDay((current) => mergeStreakReset(current, parsed.streakResetDay));
+      setDays(daysResult.merged);
       return {
         ok: true,
         added: evtResult.added,
         skipped: evtResult.skipped,
         goalsAdded: goalResult.added,
         goalsSkipped: goalResult.skipped,
+        notesAdded: daysResult.added,
+        notesSkipped: daysResult.skipped,
       };
     },
-    [events, goals]
+    [events, goals, days]
   );
 
   return {
@@ -292,5 +356,11 @@ export function useTracker(): UseTrackerAPI {
     resetStreak,
     getRollingAverage,
     getAverageDelta,
+    days,
+    getDayNotes,
+    addDayNote,
+    updateDayNote,
+    removeDayNote,
+    restoreDayNote,
   };
 }

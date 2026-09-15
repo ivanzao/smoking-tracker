@@ -42,6 +42,7 @@ const App = () => {
   };
 
   const dayEvents = editingDay ? tracker.getEventsForDay(editingDay) : [];
+  const dayNotes = editingDay ? tracker.getDayNotes(editingDay) : [];
 
   return (
     <TooltipProvider>
@@ -74,6 +75,7 @@ const App = () => {
           tracker={tracker}
           onOpenNewEvent={(type) => setDrawerType(type)}
           onOpenEditEvent={(event) => setEditingEvent(event)}
+          onOpenEditDay={(dayKey) => setEditingDay(dayKey)}
         />
       )}
       {tab === 'history' && (
@@ -116,6 +118,11 @@ const App = () => {
         onClearDay={tracker.clearDay}
         onUndo={tracker.executeUndo}
         onUpdateEvent={tracker.updateEvent}
+        notes={dayNotes}
+        onAddNote={tracker.addDayNote}
+        onUpdateNote={tracker.updateDayNote}
+        onRemoveNote={tracker.removeDayNote}
+        onRestoreNote={tracker.restoreDayNote}
       />
     </TooltipProvider>
   );
