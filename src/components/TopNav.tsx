@@ -47,16 +47,16 @@ export const TopNav = ({ tab, onChange, tracker, onOpenNewEvent }: TopNavProps) 
       </header>
 
       {/* Fixed sidebar — desktop only */}
-      <aside className="hidden md:flex flex-col fixed top-16 left-0 w-80 h-[calc(100vh-64px)] bg-card border-r-2 border-border p-6 space-y-6 overflow-y-auto scrollbar-none z-40">
+      <aside className="hidden md:flex flex-col fixed top-16 left-0 w-80 h-[calc(100vh-64px)] bg-card border-r-2 border-border p-5 space-y-4 overflow-y-auto scrollbar-none z-40">
         {/* Quick Log */}
-        <div className="space-y-4">
+        <div className="space-y-2">
           <h3 className="text-xs font-bold text-foreground uppercase tracking-wider">
             Quick Log
           </h3>
           <div className="grid grid-cols-2 gap-3">
             <button
               onClick={() => onOpenNewEvent('tobacco')}
-              className="flex flex-col items-center justify-center gap-2 p-4 bg-card border-2 border-border shadow-brutal-sm active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-transform"
+              className="flex flex-col items-center justify-center gap-1 p-3 bg-card border-2 border-border shadow-brutal-sm active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-transform"
             >
               <span className="material-symbols-outlined">smoking_rooms</span>
               <span className="text-[10px] font-bold uppercase tracking-wider">
@@ -65,7 +65,7 @@ export const TopNav = ({ tab, onChange, tracker, onOpenNewEvent }: TopNavProps) 
             </button>
             <button
               onClick={() => onOpenNewEvent('cannabis')}
-              className="flex flex-col items-center justify-center gap-2 p-4 bg-card border-2 border-border shadow-brutal-sm active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-transform"
+              className="flex flex-col items-center justify-center gap-1 p-3 bg-card border-2 border-border shadow-brutal-sm active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-transform"
             >
               <span className="material-symbols-outlined">potted_plant</span>
               <span className="text-[10px] font-bold uppercase tracking-wider">
@@ -76,7 +76,7 @@ export const TopNav = ({ tab, onChange, tracker, onOpenNewEvent }: TopNavProps) 
         </div>
 
         {/* Streak + Consumo */}
-        <div className="bg-card border-2 border-border shadow-brutal p-5 flex gap-4">
+        <div className="bg-card border-2 border-border shadow-brutal p-4 flex gap-4">
           <div className="flex-1 min-w-0">
             <p className="text-[10px] font-bold uppercase tracking-wider mb-2">
               Streak
@@ -107,8 +107,8 @@ export const TopNav = ({ tab, onChange, tracker, onOpenNewEvent }: TopNavProps) 
         </div>
 
         {/* Goals section */}
-        <div className="border-t-2 border-border pt-6">
-          <GoalsContent tracker={tracker} />
+        <div className="border-t-2 border-border pt-4">
+          <GoalsContent tracker={tracker} compact />
         </div>
       </aside>
     </>

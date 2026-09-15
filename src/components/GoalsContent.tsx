@@ -8,6 +8,8 @@ import { ExportCsvDrawer } from '@/components/ExportCsvDrawer';
 
 interface GoalsContentProps {
   tracker: UseTrackerAPI;
+  /** Tighter spacing so the whole thing fits inside the desktop sidebar without scrolling */
+  compact?: boolean;
 }
 
 const BRUTAL_BUTTON =
@@ -22,7 +24,7 @@ const IMPORT_ERROR_MESSAGES: Record<ImportError, string> = {
   'invalid-days': 'Arquivo contém anotações inválidas',
 };
 
-export const GoalsContent = ({ tracker }: GoalsContentProps) => {
+export const GoalsContent = ({ tracker, compact = false }: GoalsContentProps) => {
   const currentGoal = tracker.getCurrentGoal();
   const streak = tracker.getCurrentStreak();
   const [goalValue, setGoalValue] = useState(currentGoal?.limit ?? 10);
@@ -99,15 +101,18 @@ export const GoalsContent = ({ tracker }: GoalsContentProps) => {
     }
   };
 
+  const sectionTitle = `text-xs font-bold uppercase tracking-wider ${compact ? 'mb-2' : 'mb-4'}`;
+  const dataRow = `w-full ${compact ? 'px-3 py-2' : 'p-4'} flex items-center gap-3 hover:bg-muted text-left transition-colors`;
+
   return (
-    <div className="space-y-8">
+    <div className={compact ? 'space-y-4' : 'space-y-8'}>
       {/* Goal section */}
       <section>
-        <h2 className="text-xs font-bold uppercase tracking-wider mb-4">
+        <h2 className={sectionTitle}>
           Meta Diária
         </h2>
-        <div className="bg-card border-2 border-border shadow-brutal p-5">
-          <div className="flex justify-between items-start mb-4">
+        <div className={`bg-card border-2 border-border shadow-brutal ${compact ? 'p-4' : 'p-5'}`}>
+          <div className={`flex justify-between items-start ${compact ? 'mb-3' : 'mb-4'}`}>
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-primary border-2 border-border flex items-center justify-center">
                 <span className="material-symbols-outlined">track_changes</span>
@@ -128,7 +133,7 @@ export const GoalsContent = ({ tracker }: GoalsContentProps) => {
             value={goalValue}
             onChange={(e) => setGoalValue(Number(e.target.value))}
             aria-label="Meta diária"
-            className="w-full h-2 bg-muted appearance-none cursor-pointer accent-primary mb-4 border-2 border-border"
+            className={`w-full h-2 bg-muted appearance-none cursor-pointer accent-primary border-2 border-border ${compact ? 'mb-3' : 'mb-4'}`}
           />
           <div className="grid grid-cols-3 gap-3">
             <button
@@ -162,14 +167,14 @@ export const GoalsContent = ({ tracker }: GoalsContentProps) => {
 
       {/* Data section */}
       <section>
-        <h2 className="text-xs font-bold uppercase tracking-wider mb-4">
+        <h2 className={sectionTitle}>
           Dados
         </h2>
         <div className="bg-card border-2 border-border shadow-brutal">
           <button
             onClick={handleExport}
             aria-label="Exportar JSON"
-            className="w-full p-4 flex items-center gap-3 border-b-2 border-border hover:bg-muted text-left transition-colors"
+            className={dataRow + ' border-b-2 border-border'}
           >
             <span className="material-symbols-outlined">download</span>
             <div>
@@ -180,7 +185,7 @@ export const GoalsContent = ({ tracker }: GoalsContentProps) => {
           <button
             onClick={() => setCsvPickerOpen(true)}
             aria-label="Exportar CSV"
-            className="w-full p-4 flex items-center gap-3 border-b-2 border-border hover:bg-muted text-left transition-colors"
+            className={dataRow + ' border-b-2 border-border'}
           >
             <span className="material-symbols-outlined">table_view</span>
             <div>
@@ -191,7 +196,7 @@ export const GoalsContent = ({ tracker }: GoalsContentProps) => {
           <button
             onClick={() => fileInputRef.current?.click()}
             aria-label="Importar JSON"
-            className="w-full p-4 flex items-center gap-3 hover:bg-muted text-left transition-colors"
+            className={dataRow}
           >
             <span className="material-symbols-outlined">upload</span>
             <div>
@@ -223,7 +228,7 @@ export const GoalsContent = ({ tracker }: GoalsContentProps) => {
             tracker.events.forEach((e) => tracker.removeEvent(e.id));
             toast.success('Todos os dados apagados');
           }}
-          className="text-destructive font-bold uppercase tracking-wider text-xs flex items-center justify-center gap-2 mx-auto hover:underline px-4 py-2 transition-colors"
+          className={`text-destructive font-bold uppercase tracking-wider text-xs flex items-center justify-center gap-2 mx-auto hover:underline px-4 transition-colors ${compact ? 'py-1' : 'py-2'}`}
         >
           <span className="material-symbols-outlined text-sm">delete_forever</span>
           Limpar todos os dados
