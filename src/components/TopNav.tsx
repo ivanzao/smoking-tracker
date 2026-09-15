@@ -47,7 +47,7 @@ export const TopNav = ({ tab, onChange, tracker, onOpenNewEvent }: TopNavProps) 
       </header>
 
       {/* Fixed sidebar — desktop only */}
-      <aside className="hidden md:flex flex-col fixed top-16 left-0 w-80 h-[calc(100vh-64px)] bg-card border-r-2 border-border p-6 space-y-8 overflow-y-auto z-40">
+      <aside className="hidden md:flex flex-col fixed top-16 left-0 w-80 h-[calc(100vh-64px)] bg-card border-r-2 border-border p-6 space-y-6 overflow-y-auto scrollbar-none z-40">
         {/* Quick Log */}
         <div className="space-y-4">
           <h3 className="text-xs font-bold text-foreground uppercase tracking-wider">
@@ -107,7 +107,7 @@ export const TopNav = ({ tab, onChange, tracker, onOpenNewEvent }: TopNavProps) 
         </div>
 
         {/* Goals section */}
-        <div className="border-t-2 border-border pt-8">
+        <div className="border-t-2 border-border pt-6">
           <GoalsContent tracker={tracker} />
         </div>
       </aside>

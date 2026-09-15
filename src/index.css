@@ -53,6 +53,16 @@
     display: none;
   }
 
+  /* Scrollable but without a visible bar (used by the desktop sidebar) */
+  .scrollbar-none {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+
   body {
     @apply bg-background text-foreground;
     font-family: 'Space Grotesk', system-ui, sans-serif;

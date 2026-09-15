@@ -84,7 +84,7 @@ export const GoalsContent = ({ tracker }: GoalsContentProps) => {
   };
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-8">
       {/* Goal section */}
       <section>
         <h2 className="text-xs font-bold uppercase tracking-wider mb-4">
