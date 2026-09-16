@@ -222,31 +222,17 @@ describe('useTracker — export/import', () => {
 
 });
 
-describe('useTracker — exportCsv', () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date('2026-04-08T14:30:00'));
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
-  });
-
-  it('builds a CSV report for the period, named by its interval', () => {
+describe('useTracker — exportXlsx', () => {
+  it('builds a workbook for the range, named by its interval', async () => {
     const seed: TrackerEvent[] = [
       { id: 'a', timestamp: '2026-04-07T10:00:00-03:00', type: 'tobacco', reason: 'café' },
     ];
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ events: seed }));
     const { result } = renderHook(() => useTracker());
 
-    const report = result.current.exportCsv('7d');
-    expect(report?.fileName).toBe('smoking-tracker-2026-04-02_2026-04-08.csv');
-    expect(report?.csv).toContain('07/04/2026;ter;;1;1;0;sem meta;10:00 [T] café;10:00 [T];');
-  });
-
-  it('returns null for "all" when there is no history', () => {
-    const { result } = renderHook(() => useTracker());
-    expect(result.current.exportCsv('all')).toBeNull();
+    const report = await result.current.exportXlsx({ from: '2026-04-02', to: '2026-04-08' });
+    expect(report.fileName).toBe('smoking-tracker-2026-04-02_2026-04-08.xlsx');
+    expect(report.buffer.byteLength).toBeGreaterThan(0);
   });
 });
 

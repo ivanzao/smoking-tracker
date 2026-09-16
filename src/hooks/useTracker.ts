@@ -25,7 +25,7 @@ import {
   parseImport,
   serializeExport,
 } from '@/lib/export';
-import { CsvPeriod, csvFileName, resolveCsvRange, serializeCsv } from '@/lib/csv';
+import { XlsxRange, serializeXlsx, xlsxFileName } from '@/lib/xlsx';
 import {
   addDayNote as calcAddDayNote,
   updateDayNote as calcUpdateDayNote,
@@ -47,9 +47,9 @@ export type UndoAction =
   | { type: 'restore-event'; event: TrackerEvent }
   | { type: 'remove-event'; eventId: string };
 
-/** A day-by-day CSV report ready to download. */
-export interface CsvReport {
-  csv: string;
+/** A weekly XLSX report ready to download. */
+export interface XlsxReport {
+  buffer: ArrayBuffer;
   fileName: string;
 }
 
@@ -63,8 +63,8 @@ export interface UseTrackerAPI {
   getEventsForDay(dayKey: string): TrackerEvent[];
   getTodayTotals(): DayTotals;
   exportEvents(): string;
-  /** Null only for 'all' with no history — fixed periods always produce a report. */
-  exportCsv(period: CsvPeriod): CsvReport | null;
+  /** One sheet per Mon→Sun week in the range plus an "Eventos" sheet, one row per event. */
+  exportXlsx(range: XlsxRange): Promise<XlsxReport>;
   importEvents(raw: string): ImportOutcome;
 
   pendingUndo: UndoAction | null;
@@ -325,12 +325,11 @@ export function useTracker(): UseTrackerAPI {
     [events, goals, streakResetDay, days]
   );
 
-  const exportCsv = useCallback<UseTrackerAPI['exportCsv']>(
-    (period) => {
-      const range = resolveCsvRange(period, events, days);
-      if (!range) return null;
-      return { csv: serializeCsv(events, goals, days, range), fileName: csvFileName(range) };
-    },
+  const exportXlsx = useCallback<UseTrackerAPI['exportXlsx']>(
+    async (range) => ({
+      buffer: await serializeXlsx(events, goals, days, range),
+      fileName: xlsxFileName(range),
+    }),
     [events, goals, days]
   );
 
@@ -370,7 +369,7 @@ export function useTracker(): UseTrackerAPI {
     getEventsForDay,
     getTodayTotals,
     exportEvents,
-    exportCsv,
+    exportXlsx,
     importEvents,
     pendingUndo,
     executeUndo,

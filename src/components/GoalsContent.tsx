@@ -3,8 +3,8 @@ import { toast } from 'sonner';
 import { UseTrackerAPI, ImportOutcome } from '@/hooks/useTracker';
 import { ImportError } from '@/lib/export';
 import { todayKey } from '@/lib/events';
-import { CsvPeriod } from '@/lib/csv';
-import { ExportCsvDrawer } from '@/components/ExportCsvDrawer';
+import { XlsxRange } from '@/lib/xlsx';
+import { ExportXlsxDrawer } from '@/components/ExportXlsxDrawer';
 
 interface GoalsContentProps {
   tracker: UseTrackerAPI;
@@ -29,7 +29,7 @@ export const GoalsContent = ({ tracker, compact = false }: GoalsContentProps) =>
   const streak = tracker.getCurrentStreak();
   const [goalValue, setGoalValue] = useState(currentGoal?.limit ?? 10);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [csvPickerOpen, setCsvPickerOpen] = useState(false);
+  const [xlsxPickerOpen, setXlsxPickerOpen] = useState(false);
 
   useEffect(() => {
     setGoalValue(currentGoal?.limit ?? 10);
@@ -52,7 +52,7 @@ export const GoalsContent = ({ tracker, compact = false }: GoalsContentProps) =>
     toast.success('Streak resetado');
   };
 
-  const downloadFile = (content: string, mimeType: string, fileName: string) => {
+  const downloadFile = (content: BlobPart, mimeType: string, fileName: string) => {
     const blob = new Blob([content], { type: mimeType });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -69,14 +69,14 @@ export const GoalsContent = ({ tracker, compact = false }: GoalsContentProps) =>
     toast.success('Backup exportado');
   };
 
-  const handleExportCsv = (period: CsvPeriod) => {
-    const report = tracker.exportCsv(period);
-    if (!report) {
-      toast.error('Nenhum dado para exportar');
-      return;
-    }
-    downloadFile(report.csv, 'text/csv;charset=utf-8', report.fileName);
-    toast.success('CSV exportado');
+  const handleExportXlsx = async (range: XlsxRange) => {
+    const report = await tracker.exportXlsx(range);
+    downloadFile(
+      report.buffer,
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      report.fileName,
+    );
+    toast.success('Planilha exportada');
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -183,14 +183,14 @@ export const GoalsContent = ({ tracker, compact = false }: GoalsContentProps) =>
             </div>
           </button>
           <button
-            onClick={() => setCsvPickerOpen(true)}
-            aria-label="Exportar CSV"
+            onClick={() => setXlsxPickerOpen(true)}
+            aria-label="Exportar planilha"
             className={dataRow + ' border-b-2 border-border'}
           >
             <span className="material-symbols-outlined">table_view</span>
             <div>
-              <p className="text-sm font-bold">Exportar CSV</p>
-              <p className="text-[10px] text-muted-foreground">Relatório dia a dia para compartilhar</p>
+              <p className="text-sm font-bold">Exportar planilha</p>
+              <p className="text-[10px] text-muted-foreground">Relatório semanal (XLSX) para compartilhar</p>
             </div>
           </button>
           <button
@@ -214,10 +214,10 @@ export const GoalsContent = ({ tracker, compact = false }: GoalsContentProps) =>
         </div>
       </section>
 
-      <ExportCsvDrawer
-        open={csvPickerOpen}
-        onOpenChange={setCsvPickerOpen}
-        onSelect={handleExportCsv}
+      <ExportXlsxDrawer
+        open={xlsxPickerOpen}
+        onOpenChange={setXlsxPickerOpen}
+        onExport={handleExportXlsx}
       />
 
       {/* Danger zone */}

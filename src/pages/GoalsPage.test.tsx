@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { GoalsContent } from '@/components/GoalsContent';
 import type { UseTrackerAPI } from '@/hooks/useTracker';
 
@@ -14,7 +14,7 @@ function makeTracker(overrides: Partial<UseTrackerAPI> = {}): UseTrackerAPI {
     getEventsForDay: vi.fn(() => []),
     getTodayTotals: vi.fn(() => ({ tobacco: 0, cannabis: 0 })),
     exportEvents: vi.fn(() => '{}'),
-    exportCsv: vi.fn(() => null),
+    exportXlsx: vi.fn(async () => ({ buffer: new ArrayBuffer(0), fileName: 'x.xlsx' })),
     importEvents: vi.fn(() => ({
       ok: true, added: 0, skipped: 0, goalsAdded: 0, goalsSkipped: 0, notesAdded: 0, notesSkipped: 0,
     })),
@@ -112,27 +112,61 @@ describe('GoalsContent', () => {
     expect(exportEvents).toHaveBeenCalled();
   });
 
-  it('asks for a period before exporting CSV, then downloads it', () => {
-    const exportCsv = vi.fn(() => ({ csv: '\uFEFFData;Dia', fileName: 'smoking-tracker-2026-04-02_2026-04-08.csv' }));
-    const tracker = makeTracker({ exportCsv });
-    global.URL.createObjectURL = vi.fn(() => 'blob:mock');
-    global.URL.revokeObjectURL = vi.fn();
-    render(<GoalsContent tracker={tracker} />);
-    fireEvent.click(screen.getByRole('button', { name: /exportar csv/i }));
-    expect(exportCsv).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole('button', { name: /7 dias/i }));
-    expect(exportCsv).toHaveBeenCalledWith('7d');
-    expect(global.URL.createObjectURL).toHaveBeenCalled();
-  });
+  describe('export planilha', () => {
+    beforeEach(() => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      vi.setSystemTime(new Date('2026-04-08T14:30:00'));
+      global.URL.createObjectURL = vi.fn(() => 'blob:mock');
+      global.URL.revokeObjectURL = vi.fn();
+    });
+    afterEach(() => { vi.useRealTimers(); });
 
-  it('does not download when "Todos" has nothing to export', () => {
-    const exportCsv = vi.fn(() => null);
-    const tracker = makeTracker({ exportCsv });
-    global.URL.createObjectURL = vi.fn(() => 'blob:mock');
-    render(<GoalsContent tracker={tracker} />);
-    fireEvent.click(screen.getByRole('button', { name: /exportar csv/i }));
-    fireEvent.click(screen.getByRole('button', { name: /todos/i }));
-    expect(exportCsv).toHaveBeenCalledWith('all');
-    expect(global.URL.createObjectURL).not.toHaveBeenCalled();
+    const openPicker = () => fireEvent.click(screen.getByRole('button', { name: /exportar planilha/i }));
+    const exportBtn = () => screen.getByRole('button', { name: /^exportar$/i });
+
+    it('keeps Exportar disabled until both dates are filled, then downloads the range', async () => {
+      const exportXlsx = vi.fn(async () => ({ buffer: new ArrayBuffer(0), fileName: 'smoking-tracker-2026-04-01_2026-04-08.xlsx' }));
+      const tracker = makeTracker({ exportXlsx });
+      render(<GoalsContent tracker={tracker} />);
+      openPicker();
+      expect(exportBtn()).toBeDisabled();
+
+      fireEvent.change(screen.getByLabelText(/início/i), { target: { value: '2026-04-01' } });
+      expect(exportBtn()).toBeDisabled();
+      fireEvent.change(screen.getByLabelText(/fim/i), { target: { value: '2026-04-08' } });
+      expect(exportBtn()).toBeEnabled();
+
+      fireEvent.click(exportBtn());
+      expect(exportXlsx).toHaveBeenCalledWith({ from: '2026-04-01', to: '2026-04-08' });
+      await waitFor(() => expect(global.URL.createObjectURL).toHaveBeenCalled());
+    });
+
+    it('shortcuts only fill the inputs — nothing is exported until Exportar is clicked', () => {
+      const exportXlsx = vi.fn(async () => ({ buffer: new ArrayBuffer(0), fileName: 'x.xlsx' }));
+      const tracker = makeTracker({ exportXlsx });
+      render(<GoalsContent tracker={tracker} />);
+      openPicker();
+      fireEvent.click(screen.getByRole('button', { name: /7 dias/i }));
+      expect(screen.getByLabelText(/início/i)).toHaveValue('2026-04-02');
+      expect(screen.getByLabelText(/fim/i)).toHaveValue('2026-04-08');
+      expect(exportXlsx).not.toHaveBeenCalled();
+
+      fireEvent.click(screen.getByRole('button', { name: /1 ano/i }));
+      expect(screen.getByLabelText(/início/i)).toHaveValue('2025-04-09');
+      expect(exportXlsx).not.toHaveBeenCalled();
+    });
+
+    it('blocks an inverted range and an end date after today', () => {
+      render(<GoalsContent tracker={makeTracker()} />);
+      openPicker();
+      fireEvent.change(screen.getByLabelText(/início/i), { target: { value: '2026-04-05' } });
+      fireEvent.change(screen.getByLabelText(/fim/i), { target: { value: '2026-04-01' } });
+      expect(exportBtn()).toBeDisabled();
+      expect(screen.getByText(/início precisa ser antes do fim/i)).toBeInTheDocument();
+
+      fireEvent.change(screen.getByLabelText(/fim/i), { target: { value: '2026-04-09' } });
+      expect(exportBtn()).toBeDisabled();
+      expect(screen.getByText(/não pode ser depois de hoje/i)).toBeInTheDocument();
+    });
   });
 });
