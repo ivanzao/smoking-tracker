@@ -57,11 +57,11 @@ export const ExportXlsxDrawer = ({ open, onOpenChange, onExport }: ExportXlsxDra
   };
 
   const shortcutButton =
-    'px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider border-2 border-border shadow-brutal-sm hover:bg-muted active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-transform';
+    'px-3 py-2.5 text-xs font-bold uppercase tracking-wider border-2 border-border shadow-brutal-sm hover:bg-muted active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-transform';
 
   const form = (
-    <div className="px-4 pb-2 space-y-4">
-      <div className="flex gap-2">
+    <div className="px-4 pb-2 space-y-5">
+      <div className="grid grid-cols-3 gap-3">
         {RANGE_SHORTCUTS.map((s) => (
           <button
             key={s.days}
