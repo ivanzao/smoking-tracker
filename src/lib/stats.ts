@@ -1,4 +1,4 @@
-import { subDays, format } from 'date-fns';
+import { subDays, addDays, format } from 'date-fns';
 import { TrackerEvent, GoalEntry } from '@/types';
 import { getEventsForDay, getDayKey, todayKey } from './events';
 
@@ -102,4 +102,22 @@ export function getCurrentStreak(
     streak++;
   }
   return streak;
+}
+
+/**
+ * Total days within the goal from the first goal's start through today
+ * (not necessarily consecutive). Days without a goal in effect never count.
+ */
+export function getDaysWithinGoal(events: TrackerEvent[], goals: GoalEntry[]): number {
+  if (goals.length === 0) return 0;
+  const today = todayKey();
+  let count = 0;
+  let cursor = new Date(goals[0].effectiveFrom + 'T12:00:00');
+  let dayKey = format(cursor, 'yyyy-MM-dd');
+  while (dayKey <= today) {
+    if (getDayGoalStatus(events, goals, dayKey) === 'within') count++;
+    cursor = addDays(cursor, 1);
+    dayKey = format(cursor, 'yyyy-MM-dd');
+  }
+  return count;
 }

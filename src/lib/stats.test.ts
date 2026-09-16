@@ -5,6 +5,7 @@ import {
   getCurrentGoal,
   getDayGoalStatus,
   getCurrentStreak,
+  getDaysWithinGoal,
   getRollingAverage,
   getAverageDelta,
   getMovingAverageSeries,
@@ -301,5 +302,36 @@ describe('getMovingAverageSeries', () => {
     expect(result[0]).toEqual({ dayKey: '2026-04-01', average: expect.closeTo(2 / 3, 4) });
     expect(result[1]).toEqual({ dayKey: '2026-04-02', average: expect.closeTo(2 / 3, 4) });
     expect(result[2]).toEqual({ dayKey: '2026-04-03', average: expect.closeTo(1, 4) });
+  });
+});
+
+describe('getDaysWithinGoal', () => {
+  beforeEach(() => { vi.useFakeTimers(); });
+  afterEach(() => { vi.useRealTimers(); });
+
+  it('returns 0 when no goal is set', () => {
+    vi.setSystemTime(new Date('2026-04-08T14:00:00Z'));
+    expect(getDaysWithinGoal([], [])).toBe(0);
+  });
+
+  it('counts non-consecutive within days since the first goal started', () => {
+    vi.setSystemTime(new Date('2026-04-10T14:00:00Z'));
+    const goals = [mkGoal({ effectiveFrom: '2026-04-06', limit: 1 })];
+    const events = [
+      // 04-07 over, 04-09 over; 04-06, 04-08 and 04-10 within
+      mkEvent({ id: '1', timestamp: '2026-04-07T08:00:00-03:00' }),
+      mkEvent({ id: '2', timestamp: '2026-04-07T10:00:00-03:00' }),
+      mkEvent({ id: '3', timestamp: '2026-04-09T08:00:00-03:00' }),
+      mkEvent({ id: '4', timestamp: '2026-04-09T10:00:00-03:00' }),
+      mkEvent({ id: '5', timestamp: '2026-04-10T08:00:00-03:00' }),
+    ];
+    expect(getDaysWithinGoal(events, goals)).toBe(3);
+    expect(getCurrentStreak(events, goals)).toBe(1);
+  });
+
+  it('ignores days before the first goal', () => {
+    vi.setSystemTime(new Date('2026-04-10T14:00:00Z'));
+    const goals = [mkGoal({ effectiveFrom: '2026-04-09', limit: 5 })];
+    expect(getDaysWithinGoal([], goals)).toBe(2);
   });
 });

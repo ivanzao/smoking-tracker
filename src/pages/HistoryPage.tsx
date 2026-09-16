@@ -28,6 +28,7 @@ export const HistoryPage = ({ tracker, onOpenEditDay }: HistoryPageProps) => {
   const monthDays = getDaysInRange(startOfMonth(viewMonth), endOfMonth(viewMonth));
 
   const streak = tracker.getCurrentStreak();
+  const daysWithinGoal = tracker.getDaysWithinGoal();
   const currentGoal = tracker.getCurrentGoal();
   const avg7d = tracker.getRollingAverage(7);
   const delta7d = tracker.getAverageDelta(7);
@@ -46,7 +47,7 @@ export const HistoryPage = ({ tracker, onOpenEditDay }: HistoryPageProps) => {
       <section className="mb-8">
         <div className="flex items-end gap-2 mb-1">
           <span className="text-[3.5rem] font-bold tracking-tight leading-none">
-            {currentGoal ? streak : '—'}
+            {currentGoal ? daysWithinGoal : '—'}
           </span>
           <span className="text-xs font-bold uppercase tracking-wider mb-2">
             {currentGoal ? 'dias na meta' : 'sem meta'}

@@ -12,6 +12,7 @@ import {
   getCurrentGoal as calcCurrentGoal,
   getDayGoalStatus as calcDayGoalStatus,
   getCurrentStreak as calcCurrentStreak,
+  getDaysWithinGoal as calcDaysWithinGoal,
   getRollingAverage as calcRollingAverage,
   getAverageDelta as calcAverageDelta,
   DayGoalStatus,
@@ -74,6 +75,8 @@ export interface UseTrackerAPI {
   getCurrentGoal(): GoalEntry | null;
   getDayGoalStatus(dayKey: string): DayGoalStatus;
   getCurrentStreak(): number;
+  /** Total days within the goal since the first goal was set (not necessarily consecutive). */
+  getDaysWithinGoal(): number;
   /** Day key of the last manual streak reset, or null. */
   streakResetDay: string | null;
   /** Zero the streak from today — it resumes counting tomorrow. */
@@ -271,6 +274,11 @@ export function useTracker(): UseTrackerAPI {
     [events, goals, streakResetDay]
   );
 
+  const getDaysWithinGoal = useCallback<UseTrackerAPI['getDaysWithinGoal']>(
+    () => calcDaysWithinGoal(events, goals),
+    [events, goals]
+  );
+
   const resetStreak = useCallback<UseTrackerAPI['resetStreak']>(() => {
     setStreakResetDay(todayKey());
   }, []);
@@ -371,6 +379,7 @@ export function useTracker(): UseTrackerAPI {
     getCurrentGoal,
     getDayGoalStatus,
     getCurrentStreak,
+    getDaysWithinGoal,
     streakResetDay,
     resetStreak,
     getRollingAverage,
