@@ -143,9 +143,9 @@ export const ExportXlsxDrawer = ({ open, onOpenChange, onExport }: ExportXlsxDra
           <DialogDescription>{DESCRIPTION}</DialogDescription>
         </DialogHeader>
         {form}
-        <DialogFooter className="px-4 pt-2 gap-2 sm:space-x-0">
-          {cancelButton}
+        <DialogFooter className="px-4 pt-2 flex-col gap-2">
           {exportButton}
+          {cancelButton}
         </DialogFooter>
       </DialogContent>
     </Dialog>
