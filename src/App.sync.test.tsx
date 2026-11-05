@@ -72,7 +72,7 @@ describe('login', () => {
     fireEvent.change(await screen.findByLabelText(/código/i), { target: { value: '123456' } });
     fireEvent.click(screen.getByRole('button', { name: /^entrar$/i }));
 
-    expect((await screen.findAllByText(/quick log/i)).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText(/^registrar$/i)).length).toBeGreaterThan(0);
     expect(fake.signInWithOtp).toHaveBeenCalledWith({ email: 'eu@gmail.com' });
     expect(fake.verifyOtp).toHaveBeenCalledWith({
       email: 'eu@gmail.com',
@@ -108,7 +108,7 @@ describe('expired session', () => {
     render(<App />);
 
     expect((await screen.findAllByText(/sem login/i)).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/quick log/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/^registrar$/i).length).toBeGreaterThan(0);
     expect(fake.pushed).toEqual([]);
 
     fireEvent.click(screen.getByRole('button', { name: /entrar de novo/i }));
@@ -172,7 +172,7 @@ describe('signed in', () => {
     fake.pullFails = true;
     render(<App />);
 
-    fireEvent.click(screen.getAllByRole('button', { name: /goals/i })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: /^metas$/i })[0]);
 
     expect((await screen.findAllByText(/não foi possível sincronizar/i)).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/meta diária/i).length).toBeGreaterThan(0);
@@ -187,7 +187,7 @@ describe('signing out', () => {
 
   const openAccount = async () => {
     render(<App />);
-    fireEvent.click(screen.getAllByRole('button', { name: /goals/i })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: /^metas$/i })[0]);
     return (await screen.findAllByRole('button', { name: /sair da conta/i }))[0];
   };
 

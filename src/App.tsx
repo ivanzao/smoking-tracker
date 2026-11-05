@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { format, parseISO } from 'date-fns';
 import { toast } from 'sonner';
-import { Toaster } from '@/components/ui/toaster';
 import { Toaster as Sonner } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { BottomNav } from '@/components/BottomNav';
@@ -15,7 +14,7 @@ import { EditEventDrawer } from '@/components/EditEventDrawer';
 import { LoginScreen } from '@/components/LoginScreen';
 import { useTracker } from '@/hooks/useTracker';
 import { useSync } from '@/hooks/useSync';
-import { getDayKey, todayKey } from '@/lib/events';
+import { buildLocalIso, getDayKey, todayKey } from '@/lib/events';
 import { EventType, TrackerEvent } from '@/types';
 
 type Tab = 'tracker' | 'history' | 'goals';
@@ -29,20 +28,38 @@ const App = () => {
   const [editingDay, setEditingDay] = useState<string | null>(null);
   const [editingEvent, setEditingEvent] = useState<TrackerEvent | null>(null);
 
-  const handleSubmitEvent = (input: NewEventInput) => {
-    tracker.addEvent(input);
-    const label = input.type === 'tobacco' ? 'tabaco' : 'cannabis';
-    // Point out when the event didn't land on today, since "Consumo de Hoje" won't move
-    const daySuffix = getDayKey(input.timestamp) === todayKey()
+  const announceEvent = (event: TrackerEvent) => {
+    const label = event.type === 'tobacco' ? 'tabaco' : 'cannabis';
+    // Point out when the event didn't land on today, since today's count won't move
+    const daySuffix = getDayKey(event.timestamp) === todayKey()
       ? ''
-      : ` · ${format(parseISO(input.timestamp), 'dd/MM')}`;
+      : ` · ${format(parseISO(event.timestamp), 'dd/MM')}`;
     toast.success(`+1 ${label}${daySuffix}`, {
-      duration: 5000,
+      duration: 6000,
       action: {
         label: 'Desfazer',
-        onClick: () => tracker.executeUndo(),
+        onClick: () => tracker.removeEvent(event.id),
+      },
+      cancel: {
+        label: 'Detalhes',
+        onClick: () => {
+          // Sonner hands focus back when it loses it; let that happen before the drawer takes it
+          (document.activeElement as HTMLElement | null)?.blur();
+          setEditingEvent(event);
+        },
       },
     });
+  };
+
+  const handleSubmitEvent = (input: NewEventInput) => announceEvent(tracker.addEvent(input));
+
+  // One tap logs; where and why are optional, so they wait behind the toast's "Detalhes"
+  const handleQuickLog = (type: EventType) => announceEvent(tracker.addEvent({ type }));
+
+  const handleAddEventToDay = (dayKey: string, type: EventType) => {
+    const timestamp =
+      dayKey === todayKey() ? undefined : buildLocalIso(dayKey, format(new Date(), 'HH:mm')) ?? undefined;
+    announceEvent(tracker.addEvent({ type, timestamp }));
   };
 
   const dayEvents = editingDay ? tracker.getEventsForDay(editingDay) : [];
@@ -53,11 +70,10 @@ const App = () => {
 
   return (
     <TooltipProvider>
-      <Toaster />
       <Sonner />
 
       {sync.status === 'expired' && (
-        <div className="fixed top-16 inset-x-0 z-[45] bg-primary text-primary-foreground border-b-2 border-border px-4 py-1.5 flex items-center justify-between gap-3">
+        <div className="fixed top-header inset-x-0 z-[45] bg-primary text-primary-foreground border-b-2 border-border px-4 py-1.5 flex items-center justify-between gap-3">
           <span className="text-xs font-bold">Sem login: salvando só neste aparelho</span>
           <button
             onClick={() => setLoginOpen(true)}
@@ -72,14 +88,14 @@ const App = () => {
       )}
 
       {/* Mobile header */}
-      <header className="md:hidden fixed top-0 w-full z-50 bg-card flex justify-between items-center px-6 h-16 border-b-2 border-border">
-        <span className="text-foreground font-bold tracking-tight text-xl">Smoking Tracker</span>
+      <header className="md:hidden fixed top-0 w-full z-50 bg-card flex justify-between items-center px-6 h-header border-b-2 border-border">
+        <h1 className="text-foreground font-bold tracking-tight text-xl">Smoking Tracker</h1>
         <button
           onClick={() => setTab('goals')}
           aria-label="Configurações"
-          className="p-2 text-foreground hover:bg-muted transition-colors"
+          className="w-11 h-11 -mr-2 flex items-center justify-center text-foreground hover:bg-muted transition-colors"
         >
-          <span className="material-symbols-outlined">settings</span>
+          <span aria-hidden="true" className="material-symbols-outlined">settings</span>
         </button>
       </header>
 
@@ -96,9 +112,10 @@ const App = () => {
       {tab === 'tracker' && (
         <TrackerPage
           tracker={tracker}
-          onOpenNewEvent={(type) => setDrawerType(type)}
+          onQuickLog={handleQuickLog}
           onOpenEditEvent={(event) => setEditingEvent(event)}
           onOpenEditDay={(dayKey) => setEditingDay(dayKey)}
+          onOpenGoals={() => setTab('goals')}
         />
       )}
       {tab === 'history' && (
@@ -137,9 +154,10 @@ const App = () => {
         onOpenChange={(open) => !open && setEditingDay(null)}
         dayKey={editingDay}
         events={dayEvents}
+        onAddEvent={handleAddEventToDay}
         onRemoveEvent={tracker.removeEvent}
         onClearDay={tracker.clearDay}
-        onUndo={tracker.executeUndo}
+        onRestoreEvent={tracker.restoreEvent}
         onUpdateEvent={tracker.updateEvent}
         notes={dayNotes}
         onAddNote={tracker.addDayNote}

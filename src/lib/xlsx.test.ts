@@ -103,13 +103,13 @@ describe('buildWeekRows / buildWeekTotal', () => {
       { weekday: 'dom', date: utc('2026-04-05'), goal: null, tobacco: 0, cannabis: 0, total: 0, status: 'no-goal', notes: '' },
       { weekday: 'seg', date: utc('2026-04-06'), goal: 2, tobacco: 2, cannabis: 1, total: 3, status: 'over', notes: '' },
       { weekday: 'ter', date: utc('2026-04-07'), goal: 2, tobacco: 1, cannabis: 0, total: 1, status: 'within', notes: 'primeira nota\nsegunda nota' },
-      { weekday: 'qua', date: utc('2026-04-08'), goal: 5, tobacco: 0, cannabis: 0, total: 0, status: 'within', notes: '' },
+      { weekday: 'qua', date: utc('2026-04-08'), goal: 5, tobacco: 0, cannabis: 0, total: 0, status: 'empty', notes: '' },
     ]);
   });
 
   it('sums the week and counts within days over the days present in the sheet', () => {
     const rows = buildWeekRows(events, goals, days, { from: '2026-04-05', to: '2026-04-08' });
-    expect(buildWeekTotal(rows)).toEqual({ tobacco: 3, cannabis: 1, total: 4, withinLabel: '2/4 dentro' });
+    expect(buildWeekTotal(rows)).toEqual({ tobacco: 3, cannabis: 1, total: 4, withinLabel: '1/4 dentro' });
   });
 });
 
@@ -169,7 +169,7 @@ describe('buildWorkbook', () => {
     expect(total.getCell(4).value).toBe(3);
     expect(total.getCell(5).value).toBe(1);
     expect(total.getCell(6).value).toBe(4);
-    expect(total.getCell(7).value).toBe('2/3 dentro');
+    expect(total.getCell(7).value).toBe('1/3 dentro');
     expect(total.font?.bold).toBe(true);
     expect(sheet.rowCount).toBe(5);
   });

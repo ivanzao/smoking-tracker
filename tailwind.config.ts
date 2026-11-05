@@ -3,6 +3,7 @@ import type { Config } from "tailwindcss";
 export default {
   content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
   prefix: "",
+  future: { hoverOnlyWhenSupported: true },
   theme: {
     container: {
       center: true,
@@ -12,6 +13,10 @@ export default {
       },
     },
     extend: {
+      screens: {
+        // A phone on its side is wide but short: it keeps the mobile layout. Mirrors use-mobile.tsx.
+        md: { raw: "(min-width: 768px) and (min-height: 500px)" },
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",

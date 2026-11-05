@@ -88,14 +88,21 @@ export const NewEventDrawer = ({ open, onOpenChange, type, onSubmit }: NewEventD
         onDateChange={setDate}
         onTimeChange={setTime}
       />
+      {timestamp !== null && !canSubmit && (
+        <p role="alert" className="text-xs font-bold text-destructive">
+          A data e a hora não podem estar no futuro.
+        </p>
+      )}
       <div className="space-y-1.5">
         <Label htmlFor="new-event-location">Onde?</Label>
         <Input
           id="new-event-location"
           placeholder="casa, trabalho, bar…"
+          enterKeyHint="next"
+          autoComplete="off"
           value={location}
           onChange={(e) => setLocation(e.target.value)}
-          autoFocus
+          autoFocus={!isMobile}
         />
       </div>
       <div className="space-y-1.5">
@@ -103,6 +110,8 @@ export const NewEventDrawer = ({ open, onOpenChange, type, onSubmit }: NewEventD
         <Input
           id="new-event-reason"
           placeholder="primeiro do dia, pós almoço…"
+          enterKeyHint="done"
+          autoComplete="off"
           value={reason}
           onChange={(e) => setReason(e.target.value)}
           onKeyDown={(e) => {

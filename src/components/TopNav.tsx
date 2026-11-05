@@ -14,8 +14,8 @@ interface TopNavProps {
 }
 
 const NAV_TABS: { id: Tab; label: string }[] = [
-  { id: 'tracker', label: 'Tracker' },
-  { id: 'history', label: 'History' },
+  { id: 'tracker', label: 'Hoje' },
+  { id: 'history', label: 'Histórico' },
 ];
 
 export const TopNav = ({ tab, onChange, tracker, sync, onOpenNewEvent }: TopNavProps) => {
@@ -28,7 +28,7 @@ export const TopNav = ({ tab, onChange, tracker, sync, onOpenNewEvent }: TopNavP
     <>
       {/* Fixed header — desktop only */}
       <header className="hidden md:flex fixed top-0 w-full z-50 bg-background h-16 items-center justify-between px-6 border-b-2 border-border">
-        <span className="text-foreground font-bold tracking-tight text-xl">Smoking Tracker</span>
+        <h1 className="text-foreground font-bold tracking-tight text-xl">Smoking Tracker</h1>
         <nav className="flex gap-3 items-center">
           {NAV_TABS.map(({ id, label }) => (
             <button
@@ -50,17 +50,17 @@ export const TopNav = ({ tab, onChange, tracker, sync, onOpenNewEvent }: TopNavP
 
       {/* Fixed sidebar — desktop only */}
       <aside className="hidden md:flex flex-col fixed top-16 left-0 w-80 h-[calc(100vh-64px)] bg-card border-r-2 border-border p-5 space-y-4 overflow-y-auto scrollbar-none z-40">
-        {/* Quick Log */}
+        {/* Log */}
         <div className="space-y-2">
           <h3 className="text-xs font-bold text-foreground uppercase tracking-wider">
-            Quick Log
+            Registrar
           </h3>
           <div className="grid grid-cols-2 gap-3">
             <button
               onClick={() => onOpenNewEvent('tobacco')}
               className="flex flex-col items-center justify-center gap-1 p-3 bg-card border-2 border-border shadow-brutal-sm active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-transform"
             >
-              <span className="material-symbols-outlined">smoking_rooms</span>
+              <span aria-hidden="true" className="material-symbols-outlined">smoking_rooms</span>
               <span className="text-[10px] font-bold uppercase tracking-wider">
                 Tabaco
               </span>
@@ -69,7 +69,7 @@ export const TopNav = ({ tab, onChange, tracker, sync, onOpenNewEvent }: TopNavP
               onClick={() => onOpenNewEvent('cannabis')}
               className="flex flex-col items-center justify-center gap-1 p-3 bg-card border-2 border-border shadow-brutal-sm active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-transform"
             >
-              <span className="material-symbols-outlined">potted_plant</span>
+              <span aria-hidden="true" className="material-symbols-outlined">eco</span>
               <span className="text-[10px] font-bold uppercase tracking-wider">
                 Cannabis
               </span>
@@ -77,11 +77,11 @@ export const TopNav = ({ tab, onChange, tracker, sync, onOpenNewEvent }: TopNavP
           </div>
         </div>
 
-        {/* Streak + Consumo */}
+        {/* Sequência + Consumo */}
         <div className="bg-card border-2 border-border shadow-brutal p-4 flex gap-4">
           <div className="flex-1 min-w-0">
             <p className="text-[10px] font-bold uppercase tracking-wider mb-2">
-              Streak
+              Sequência
             </p>
             <div className="flex items-baseline gap-1">
               <span className="text-3xl font-bold tracking-tight">

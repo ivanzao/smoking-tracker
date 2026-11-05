@@ -86,11 +86,12 @@ export const EditEventDrawer = ({ open, onOpenChange, event, onSave }: EditEvent
   const formContent = (
     <div className="px-4 pb-2 space-y-3">
       <div className="space-y-1.5">
-        <Label>Tipo</Label>
-        <div className="flex gap-2">
+        <Label id="edit-event-type">Tipo</Label>
+        <div role="group" aria-labelledby="edit-event-type" className="flex gap-2">
           <Button
             variant={type === 'tobacco' ? 'default' : 'outline'}
             onClick={() => setType('tobacco')}
+            aria-pressed={type === 'tobacco'}
             className="flex-1"
           >
             <Cigarette className="w-4 h-4 mr-2" />
@@ -99,6 +100,7 @@ export const EditEventDrawer = ({ open, onOpenChange, event, onSave }: EditEvent
           <Button
             variant={type === 'cannabis' ? 'default' : 'outline'}
             onClick={() => setType('cannabis')}
+            aria-pressed={type === 'cannabis'}
             className="flex-1"
           >
             <Leaf className="w-4 h-4 mr-2" />
@@ -113,11 +115,18 @@ export const EditEventDrawer = ({ open, onOpenChange, event, onSave }: EditEvent
         onDateChange={setDate}
         onTimeChange={setTime}
       />
+      {timestamp !== null && !canSave && (
+        <p role="alert" className="text-xs font-bold text-destructive">
+          A data e a hora não podem estar no futuro.
+        </p>
+      )}
       <div className="space-y-1.5">
         <Label htmlFor="edit-event-location">Onde?</Label>
         <Input
           id="edit-event-location"
           placeholder="casa, trabalho, bar…"
+          enterKeyHint="next"
+          autoComplete="off"
           value={location}
           onChange={(e) => setLocation(e.target.value)}
         />
@@ -127,6 +136,8 @@ export const EditEventDrawer = ({ open, onOpenChange, event, onSave }: EditEvent
         <Input
           id="edit-event-reason"
           placeholder="primeiro do dia, pós almoço…"
+          enterKeyHint="done"
+          autoComplete="off"
           value={reason}
           onChange={(e) => setReason(e.target.value)}
           onKeyDown={(e) => {

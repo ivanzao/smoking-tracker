@@ -2,7 +2,11 @@ import { subDays, addDays, format } from 'date-fns';
 import { TrackerEvent, GoalEntry } from '@/types';
 import { getEventsForDay, getDayKey, todayKey } from './events';
 
-export type DayGoalStatus = 'within' | 'over' | 'no-goal';
+/**
+ * `empty` is a past or current day with a goal and nothing logged: neutral, because
+ * the app can't tell an abstinent day from a forgotten one. `future` hasn't happened.
+ */
+export type DayGoalStatus = 'within' | 'over' | 'empty' | 'future' | 'no-goal';
 
 /**
  * Find the goal in effect for a specific day.
@@ -31,9 +35,11 @@ export function getDayGoalStatus(
   goals: GoalEntry[],
   dayKey: string,
 ): DayGoalStatus {
+  if (dayKey > todayKey()) return 'future';
   const goal = getGoalForDay(goals, dayKey);
   if (!goal) return 'no-goal';
   const dayEvents = getEventsForDay(events, dayKey);
+  if (dayEvents.length === 0) return 'empty';
   return dayEvents.length <= goal.limit ? 'within' : 'over';
 }
 
@@ -65,6 +71,18 @@ export function getAverageDelta(
   return (currentAvg - prevAvg) / prevAvg;
 }
 
+/** One sentence for the week-over-week change; `delta` comes from getAverageDelta. */
+export function describeTrend(delta: number | null): string {
+  if (delta === null) return 'Sua tendência aparece depois de duas semanas de registros';
+  const percent = Math.round(Math.abs(delta) * 100);
+  if (percent === 0) return 'Igual à semana anterior';
+  return `${percent}% ${delta < 0 ? 'a menos' : 'a mais'} que na semana anterior`;
+}
+
+export function formatAverage(value: number): string {
+  return value.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+}
+
 export function getMovingAverageSeries(
   events: TrackerEvent[],
   dayKeys: string[],
@@ -77,7 +95,8 @@ export function getMovingAverageSeries(
 }
 
 /**
- * Consecutive days (ending today) within the goal.
+ * Logged days within the goal, walking back from today until one goes over.
+ * Empty days are skipped: they neither add to the streak nor break it.
  * `streakResetDay` is a manual reset marker: that day and everything before it
  * never count, so the streak only resumes from the following day.
  */
@@ -86,27 +105,22 @@ export function getCurrentStreak(
   goals: GoalEntry[],
   streakResetDay: string | null = null,
 ): number {
-  const today = todayKey();
-  if (streakResetDay && today <= streakResetDay) return 0;
-  const todayStatus = getDayGoalStatus(events, goals, today);
-  if (todayStatus !== 'within') return 0;
-
-  let streak = 1;
-  let cursor = new Date(today + 'T12:00:00');
+  let streak = 0;
+  let cursor = new Date(todayKey() + 'T12:00:00');
   while (true) {
-    cursor = subDays(cursor, 1);
     const dayKey = format(cursor, 'yyyy-MM-dd');
     if (streakResetDay && dayKey <= streakResetDay) break;
     const status = getDayGoalStatus(events, goals, dayKey);
-    if (status !== 'within') break;
-    streak++;
+    if (status === 'within') streak++;
+    else if (status !== 'empty') break;
+    cursor = subDays(cursor, 1);
   }
   return streak;
 }
 
 /**
- * Total days within the goal from the first goal's start through today
- * (not necessarily consecutive). Days without a goal in effect never count.
+ * Logged days within the goal from the first goal's start through today
+ * (not necessarily consecutive). Empty days and days without a goal never count.
  */
 export function getDaysWithinGoal(events: TrackerEvent[], goals: GoalEntry[]): number {
   if (goals.length === 0) return 0;

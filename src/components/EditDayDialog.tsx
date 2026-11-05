@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { format, parseISO } from 'date-fns';
-import { Cigarette, Leaf, Trash2, ChevronRight } from 'lucide-react';
+import { Cigarette, Leaf, Plus, Trash2, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   Dialog,
@@ -14,16 +14,17 @@ import { Button } from '@/components/ui/button';
 import { EditEventDrawer } from './EditEventDrawer';
 import { DayNotes } from './DayNotes';
 import { getDayKey } from '@/lib/events';
-import { DayNote, TrackerEvent } from '@/types';
+import { DayNote, EventType, TrackerEvent } from '@/types';
 
 interface EditDayDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   dayKey: string | null;
   events: TrackerEvent[];
+  onAddEvent: (dayKey: string, type: EventType) => void;
   onRemoveEvent: (id: string) => void;
   onClearDay: (dayKey: string) => void;
-  onUndo: () => void;
+  onRestoreEvent: (event: TrackerEvent) => void;
   onUpdateEvent: (id: string, patch: Partial<Omit<TrackerEvent, 'id'>>) => void;
   notes: DayNote[];
   onAddNote: (dayKey: string, text: string) => void;
@@ -37,9 +38,10 @@ export const EditDayDialog = ({
   onOpenChange,
   dayKey,
   events,
+  onAddEvent,
   onRemoveEvent,
   onClearDay,
-  onUndo,
+  onRestoreEvent,
   onUpdateEvent,
   notes,
   onAddNote,
@@ -55,7 +57,8 @@ export const EditDayDialog = ({
     ? format(parseISO(dayKey + 'T00:00:00'), 'dd/MM/yyyy')
     : '';
 
-  const sorted = [...events].sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+  // Newest first: the one someone came to fix is usually the last one logged
+  const sorted = [...events].sort((a, b) => b.timestamp.localeCompare(a.timestamp));
 
   // The list only shows this day's events, so an event moved elsewhere vanishes — say where it went
   const handleSaveEvent = (id: string, patch: Partial<Omit<TrackerEvent, 'id'>>) => {
@@ -65,7 +68,6 @@ export const EditDayDialog = ({
     }
   };
 
-  // The undo toast carries the note itself, so it never collides with the events' pendingUndo slot
   const handleRemoveNote = (noteId: string) => {
     if (!dayKey) return;
     const note = notes.find((n) => n.id === noteId);
@@ -104,7 +106,12 @@ export const EditDayDialog = ({
       }}
     >
       <DialogContent
-        className="sm:max-w-[480px]"
+        className="sm:max-w-[480px] flex flex-col overflow-hidden"
+        // Land on the dialog, not on the first control: that's a delete button or the note field
+        onOpenAutoFocus={(e) => {
+          e.preventDefault();
+          (e.currentTarget as HTMLElement | null)?.focus();
+        }}
         // Radix listens for Escape on document (capture); while a note is being edited,
         // Escape belongs to the inline input, not to the dialog
         onEscapeKeyDown={(e) => {
@@ -116,71 +123,92 @@ export const EditDayDialog = ({
           <DialogDescription>
             {sorted.length === 0
               ? 'Nenhum evento registrado neste dia.'
-              : `${sorted.length} evento(s) registrado(s)`}
-            {notes.length > 0 && ` · ${notes.length} anotação(ões)`}
+              : `${sorted.length} ${sorted.length === 1 ? 'evento registrado' : 'eventos registrados'}`}
+            {notes.length > 0 && ` · ${notes.length} ${notes.length === 1 ? 'anotação' : 'anotações'}`}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="max-h-[50vh] overflow-y-auto space-y-2 py-2">
-          {sorted.map((ev) => {
-            const Icon = ev.type === 'tobacco' ? Cigarette : Leaf;
-            const time = format(parseISO(ev.timestamp), 'HH:mm');
-            const context = [ev.location, ev.reason].filter(Boolean).join(' · ');
+        {/* The only scroller, so the title and the actions never leave the screen */}
+        <div className="min-h-0 flex-1 overflow-y-auto space-y-4 p-1 -m-1">
+          {sorted.length > 0 && (
+            <ul className="space-y-2">
+              {sorted.map((ev) => {
+                const Icon = ev.type === 'tobacco' ? Cigarette : Leaf;
+                const time = format(parseISO(ev.timestamp), 'HH:mm');
+                const context = [ev.location, ev.reason].filter(Boolean).join(' · ');
 
-            return (
-              <div
-                key={ev.id}
-                onClick={() => setEditingEvent(ev)}
-                className="flex items-center gap-3 p-3 border-2 border-border bg-card cursor-pointer hover:bg-muted active:translate-x-[1px] active:translate-y-[1px] transition-transform"
-              >
-                <div className="w-9 h-9 border-2 border-border bg-primary flex items-center justify-center shrink-0">
-                  <Icon className="w-4 h-4" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-bold">{time}</div>
-                  <div className="text-xs text-muted-foreground truncate">
-                    {context || <span className="text-muted-foreground/60">sem contexto</span>}
-                  </div>
-                </div>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onRemoveEvent(ev.id);
-                    toast('Evento removido', {
-                      duration: 5000,
-                      action: {
-                        label: 'Desfazer',
-                        onClick: () => onUndo(),
-                      },
-                    });
-                  }}
-                  aria-label="Remover evento"
-                  className="p-2 text-foreground hover:bg-destructive hover:text-destructive-foreground transition-colors"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-                <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
-              </div>
-            );
-          })}
+                return (
+                  <li key={ev.id} className="flex items-center border-2 border-border bg-card">
+                    <button
+                      type="button"
+                      onClick={() => setEditingEvent(ev)}
+                      className="min-w-0 flex-1 flex items-center gap-3 p-3 text-left hover:bg-muted active:translate-x-[1px] active:translate-y-[1px] transition-transform"
+                    >
+                      <span className="w-9 h-9 border-2 border-border bg-primary flex items-center justify-center shrink-0">
+                        <Icon aria-hidden="true" className="w-4 h-4" />
+                      </span>
+                      <span className="flex-1 min-w-0">
+                        <span className="block text-sm font-bold">
+                          {time} <span className="sr-only">{ev.type === 'tobacco' ? 'tabaco' : 'cannabis'}</span>
+                        </span>
+                        <span className="block text-xs text-muted-foreground truncate">
+                          {context || 'sem contexto'}
+                        </span>
+                      </span>
+                      <ChevronRight aria-hidden="true" className="w-4 h-4 text-muted-foreground shrink-0" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onRemoveEvent(ev.id);
+                        toast('Evento removido', {
+                          duration: 5000,
+                          action: {
+                            label: 'Desfazer',
+                            onClick: () => onRestoreEvent(ev),
+                          },
+                        });
+                      }}
+                      aria-label={`Remover evento das ${time}`}
+                      className="w-11 h-11 mr-1 flex items-center justify-center shrink-0 text-foreground hover:bg-destructive hover:text-destructive-foreground transition-colors"
+                    >
+                      <Trash2 aria-hidden="true" className="w-4 h-4" />
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+
+          {dayKey && (
+            <div className="grid grid-cols-2 gap-2">
+              <Button variant="outline" onClick={() => onAddEvent(dayKey, 'tobacco')}>
+                <Plus aria-hidden="true" /> Tabaco
+              </Button>
+              <Button variant="outline" onClick={() => onAddEvent(dayKey, 'cannabis')}>
+                <Plus aria-hidden="true" /> Cannabis
+              </Button>
+            </div>
+          )}
+
+          {dayKey && (
+            <DayNotes
+              dayKey={dayKey}
+              notes={notes}
+              onEditingChange={setEditingNote}
+              onAdd={(text) => onAddNote(dayKey, text)}
+              onUpdate={(noteId, text) => onUpdateNote(dayKey, noteId, text)}
+              onRemove={handleRemoveNote}
+            />
+          )}
         </div>
-
-        {dayKey && (
-          <DayNotes
-            dayKey={dayKey}
-            notes={notes}
-            onEditingChange={setEditingNote}
-            onAdd={(text) => onAddNote(dayKey, text)}
-            onUpdate={(noteId, text) => onUpdateNote(dayKey, noteId, text)}
-            onRemove={handleRemoveNote}
-          />
-        )}
 
         <DialogFooter className="flex-col sm:flex-row sm:justify-between gap-2">
           {sorted.length > 0 && (
             <Button
-              variant="destructive"
+              variant={confirmClear ? 'destructive' : 'outline'}
               onClick={handleClearDay}
+              className={confirmClear ? undefined : 'text-destructive'}
             >
               {confirmClear ? 'Confirmar: limpar dia' : 'Limpar dia'}
             </Button>
