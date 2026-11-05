@@ -1,5 +1,6 @@
 import { EventType } from '@/types';
 import { UseTrackerAPI } from '@/hooks/useTracker';
+import { UseSyncAPI } from '@/hooks/useSync';
 import { GoalsContent } from '@/components/GoalsContent';
 
 type Tab = 'tracker' | 'history' | 'goals';
@@ -8,6 +9,7 @@ interface TopNavProps {
   tab: Tab;
   onChange: (tab: Tab) => void;
   tracker: UseTrackerAPI;
+  sync: UseSyncAPI;
   onOpenNewEvent: (type: EventType) => void;
 }
 
@@ -16,7 +18,7 @@ const NAV_TABS: { id: Tab; label: string }[] = [
   { id: 'history', label: 'History' },
 ];
 
-export const TopNav = ({ tab, onChange, tracker, onOpenNewEvent }: TopNavProps) => {
+export const TopNav = ({ tab, onChange, tracker, sync, onOpenNewEvent }: TopNavProps) => {
   const streak = tracker.getCurrentStreak();
   const currentGoal = tracker.getCurrentGoal();
   const totals = tracker.getTodayTotals();
@@ -108,7 +110,7 @@ export const TopNav = ({ tab, onChange, tracker, onOpenNewEvent }: TopNavProps) 
 
         {/* Goals section */}
         <div className="border-t-2 border-border pt-4">
-          <GoalsContent tracker={tracker} compact />
+          <GoalsContent tracker={tracker} sync={sync} compact />
         </div>
       </aside>
     </>
