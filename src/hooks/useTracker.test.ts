@@ -746,3 +746,86 @@ describe('useTracker — import with goals', () => {
     expect(result.current.goals).toEqual(goals);
   });
 });
+
+describe('useTracker — applySyncChanges', () => {
+  const remoteEvent: TrackerEvent = {
+    id: 'remote',
+    timestamp: '2026-04-08T10:00:00-03:00',
+    type: 'cannabis',
+  };
+
+  it('merges remote records in chronological order and persists them', () => {
+    const local: TrackerEvent = { id: 'local', timestamp: '2026-04-08T12:00:00-03:00', type: 'tobacco' };
+    const earlier: TrackerEvent = { id: 'early', timestamp: '2026-04-08T08:00:00-03:00', type: 'tobacco' };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ events: [earlier, local] }));
+    const { result } = renderHook(() => useTracker());
+
+    act(() => {
+      result.current.applySyncChanges({
+        upserts: [{ kind: 'event', id: 'remote', data: remoteEvent }],
+        deletes: [],
+      });
+    });
+
+    expect(result.current.events.map((e) => e.id)).toEqual(['early', 'remote', 'local']);
+    expect(JSON.parse(localStorage.getItem(STORAGE_KEY)!).events).toHaveLength(3);
+  });
+
+  it('keeps a local edit made in the same tick as a remote change', () => {
+    const { result } = renderHook(() => useTracker());
+
+    act(() => {
+      result.current.addEvent({ type: 'tobacco', timestamp: '2026-04-08T12:00:00-03:00' });
+      result.current.applySyncChanges({
+        upserts: [{ kind: 'event', id: 'remote', data: remoteEvent }],
+        deletes: [],
+      });
+    });
+
+    expect(result.current.events).toHaveLength(2);
+  });
+
+  it('applies remote deletes, goals, notes and the streak reset', () => {
+    const goal: GoalEntry = { id: 'g1', limit: 5, effectiveFrom: '2026-04-01' };
+    const note = { id: 'n1', text: 'oi', createdAt: '2026-04-08T10:00:00-03:00' };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ events: [remoteEvent] }));
+    const { result } = renderHook(() => useTracker());
+
+    act(() => {
+      result.current.applySyncChanges({
+        upserts: [
+          { kind: 'goal', id: 'g1', data: goal },
+          { kind: 'note', id: 'n1', data: { dayKey: '2026-04-08', note } },
+          { kind: 'streak-reset', id: 'current', data: { day: '2026-04-07' } },
+        ],
+        deletes: [{ kind: 'event', id: 'remote' }],
+      });
+    });
+
+    expect(result.current.syncState).toEqual({
+      events: [],
+      goals: [goal],
+      days: [{ dayKey: '2026-04-08', notes: [note] }],
+      streakResetDay: '2026-04-07',
+    });
+  });
+});
+
+describe('useTracker — other tabs', () => {
+  it('picks up what another tab saved', () => {
+    const { result } = renderHook(() => useTracker());
+    const fromOtherTab: TrackerEvent = {
+      id: 'other',
+      timestamp: '2026-04-08T12:00:00-03:00',
+      type: 'tobacco',
+    };
+    const saved = JSON.stringify({ events: [fromOtherTab], goals: [], streakResetDay: null, days: [] });
+    localStorage.setItem(STORAGE_KEY, saved);
+
+    act(() => {
+      window.dispatchEvent(new StorageEvent('storage', { key: STORAGE_KEY, newValue: saved }));
+    });
+
+    expect(result.current.events).toEqual([fromOtherTab]);
+  });
+});

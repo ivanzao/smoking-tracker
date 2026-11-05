@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { EventType, GoalEntry, TrackerEvent, DayTotals, DayNote, DayRecord } from '@/types';
 import {
@@ -34,8 +34,9 @@ import {
   isValidDayRecord,
   mergeDays,
 } from '@/lib/days';
+import { SyncChanges, SyncState, applyChanges } from '@/lib/sync/engine';
 
-const STORAGE_KEY = 'smoking-tracker';
+export const STORAGE_KEY = 'smoking-tracker';
 const DAY_KEY_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 // Events are kept in chronological order (buildExport's dateRange relies on it);
@@ -93,6 +94,11 @@ export interface UseTrackerAPI {
   removeDayNote(dayKey: string, noteId: string): void;
   /** Re-insert a removed note as-is (same id/createdAt); used by the undo toast. */
   restoreDayNote(dayKey: string, note: DayNote): void;
+
+  /** Everything that gets synced, as one object. */
+  syncState: SyncState;
+  /** Apply records that came from the server. */
+  applySyncChanges(changes: SyncChanges): void;
 }
 
 export type ImportOutcome =
@@ -172,6 +178,21 @@ export function useTracker(): UseTrackerAPI {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ events, goals, streakResetDay, days }));
   }, [events, goals, streakResetDay, days]);
+
+  // The sync ledger is shared between tabs, so a tab holding old state would read
+  // what another tab added as deletions
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key !== STORAGE_KEY || e.newValue === null) return;
+      const next = loadFromStorage();
+      setEvents(next.events);
+      setGoals(next.goals);
+      setStreakResetDay(next.streakResetDay);
+      setDays(next.days);
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
 
   const addEvent = useCallback<UseTrackerAPI['addEvent']>((input) => {
     const id = uuidv4();
@@ -320,6 +341,21 @@ export function useTracker(): UseTrackerAPI {
     setDays((prev) => calcAddDayNote(prev, dayKey, note));
   }, []);
 
+  const syncState = useMemo<SyncState>(
+    () => ({ events, goals, days, streakResetDay }),
+    [events, goals, days, streakResetDay]
+  );
+
+  const applySyncChanges = useCallback<UseTrackerAPI['applySyncChanges']>((changes) => {
+    // One functional update per slice, so a local edit queued in the same tick survives
+    const apply = (slice: Partial<SyncState>) =>
+      applyChanges({ ...EMPTY_STATE, ...slice }, changes);
+    setEvents((prev) => apply({ events: prev }).events);
+    setGoals((prev) => apply({ goals: prev }).goals);
+    setDays((prev) => apply({ days: prev }).days);
+    setStreakResetDay((prev) => apply({ streakResetDay: prev }).streakResetDay);
+  }, []);
+
   const exportEvents = useCallback<UseTrackerAPI['exportEvents']>(
     () => serializeExport(events, goals, streakResetDay, days),
     [events, goals, streakResetDay, days]
@@ -389,5 +425,7 @@ export function useTracker(): UseTrackerAPI {
     updateDayNote,
     removeDayNote,
     restoreDayNote,
+    syncState,
+    applySyncChanges,
   };
 }

@@ -5,9 +5,13 @@ import { ImportError } from '@/lib/export';
 import { todayKey } from '@/lib/events';
 import { XlsxRange } from '@/lib/xlsx';
 import { ExportXlsxDrawer } from '@/components/ExportXlsxDrawer';
+import { AccountSection } from '@/components/AccountSection';
+import { UseSyncAPI } from '@/hooks/useSync';
 
 interface GoalsContentProps {
   tracker: UseTrackerAPI;
+  /** Absent or disabled when the app runs local-only. */
+  sync?: UseSyncAPI;
   /** Tighter spacing so the whole thing fits inside the desktop sidebar without scrolling */
   compact?: boolean;
 }
@@ -24,7 +28,7 @@ const IMPORT_ERROR_MESSAGES: Record<ImportError, string> = {
   'invalid-days': 'Arquivo contém anotações inválidas',
 };
 
-export const GoalsContent = ({ tracker, compact = false }: GoalsContentProps) => {
+export const GoalsContent = ({ tracker, sync, compact = false }: GoalsContentProps) => {
   const currentGoal = tracker.getCurrentGoal();
   const streak = tracker.getCurrentStreak();
   const [goalValue, setGoalValue] = useState(currentGoal?.limit ?? 10);
@@ -213,6 +217,8 @@ export const GoalsContent = ({ tracker, compact = false }: GoalsContentProps) =>
           />
         </div>
       </section>
+
+      {sync?.email && <AccountSection sync={sync} titleClassName={sectionTitle} />}
 
       <ExportXlsxDrawer
         open={xlsxPickerOpen}

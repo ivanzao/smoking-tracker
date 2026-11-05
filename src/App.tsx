@@ -12,7 +12,9 @@ import { GoalsPage } from '@/pages/GoalsPage';
 import { NewEventDrawer, NewEventInput } from '@/components/NewEventDrawer';
 import { EditDayDialog } from '@/components/EditDayDialog';
 import { EditEventDrawer } from '@/components/EditEventDrawer';
+import { LoginScreen } from '@/components/LoginScreen';
 import { useTracker } from '@/hooks/useTracker';
+import { useSync } from '@/hooks/useSync';
 import { getDayKey, todayKey } from '@/lib/events';
 import { EventType, TrackerEvent } from '@/types';
 
@@ -20,6 +22,8 @@ type Tab = 'tracker' | 'history' | 'goals';
 
 const App = () => {
   const tracker = useTracker();
+  const sync = useSync(tracker);
+  const [loginOpen, setLoginOpen] = useState(false);
   const [tab, setTab] = useState<Tab>('tracker');
   const [drawerType, setDrawerType] = useState<EventType | null>(null);
   const [editingDay, setEditingDay] = useState<string | null>(null);
@@ -44,10 +48,28 @@ const App = () => {
   const dayEvents = editingDay ? tracker.getEventsForDay(editingDay) : [];
   const dayNotes = editingDay ? tracker.getDayNotes(editingDay) : [];
 
+  if (sync.status === 'loading') return null;
+  if (sync.status === 'needs-login') return <LoginScreen sync={sync} />;
+
   return (
     <TooltipProvider>
       <Toaster />
       <Sonner />
+
+      {sync.status === 'expired' && (
+        <div className="fixed top-16 inset-x-0 z-[45] bg-primary text-primary-foreground border-b-2 border-border px-4 py-1.5 flex items-center justify-between gap-3">
+          <span className="text-xs font-bold">Sem login: salvando só neste aparelho</span>
+          <button
+            onClick={() => setLoginOpen(true)}
+            className="text-xs font-bold uppercase tracking-wide underline shrink-0"
+          >
+            Entrar de novo
+          </button>
+        </div>
+      )}
+      {loginOpen && sync.status === 'expired' && (
+        <LoginScreen sync={sync} onCancel={() => setLoginOpen(false)} />
+      )}
 
       {/* Mobile header */}
       <header className="md:hidden fixed top-0 w-full z-50 bg-card flex justify-between items-center px-6 h-16 border-b-2 border-border">
@@ -66,6 +88,7 @@ const App = () => {
         tab={tab}
         onChange={setTab}
         tracker={tracker}
+        sync={sync}
         onOpenNewEvent={(type) => setDrawerType(type)}
       />
 
@@ -85,7 +108,7 @@ const App = () => {
         />
       )}
       {tab === 'goals' && (
-        <GoalsPage tracker={tracker} />
+        <GoalsPage tracker={tracker} sync={sync} />
       )}
 
       {/* Desktop main content area (for history and goals on desktop) */}

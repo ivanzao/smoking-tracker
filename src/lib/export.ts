@@ -57,7 +57,7 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function isValidEvent(value: unknown): value is TrackerEvent {
+export function isValidEvent(value: unknown): value is TrackerEvent {
   if (!isPlainObject(value)) return false;
   if (typeof value.id !== 'string') return false;
   if (typeof value.timestamp !== 'string') return false;
@@ -67,7 +67,7 @@ function isValidEvent(value: unknown): value is TrackerEvent {
   return true;
 }
 
-function isValidGoal(value: unknown): value is GoalEntry {
+export function isValidGoal(value: unknown): value is GoalEntry {
   if (!isPlainObject(value)) return false;
   if (typeof value.id !== 'string') return false;
   if (typeof value.limit !== 'number' || !Number.isInteger(value.limit) || value.limit <= 0) return false;
