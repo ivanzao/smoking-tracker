@@ -112,6 +112,12 @@ Abas do mesmo navegador compartilham o ledger, então cada aba recarrega o estad
 - Os templates de e-mail do Supabase precisam usar `{{ .Token }}`, senão chega um link em vez do código.
 - Enquanto as variáveis não existirem, o deploy continua funcionando só local.
 
+## Defesas adicionais
+
+- CSP gerada só na build (`vite.config.ts`), porque o servidor de desenvolvimento precisa de scripts inline. O `connect-src` usa a origem de `VITE_SUPABASE_URL`. `style-src` mantém `'unsafe-inline'` porque Sonner e Vaul injetam `<style>` em tempo de execução.
+- O pull filtra por `user_id` além da RLS. A RLS continua sendo a proteção real.
+- `user_id` fica em texto puro: é um UUID aleatório, sem valor como credencial. Um hash não protegeria `data` e quebraria a chave estrangeira.
+
 ## Limitações conhecidas
 
 - O relógio do aparelho decide conflitos. Relógios muito errados podem fazer a edição errada vencer.

@@ -17,6 +17,8 @@ export function createSupabaseRemote(client: SupabaseClient, userId: string): Re
         let query = client
           .from('records')
           .select('kind, id, data, updated_at, deleted_at, synced_at')
+          // RLS is what protects the rows; this keeps the query scoped if RLS is ever off
+          .eq('user_id', userId)
           .order('synced_at')
           .order('kind')
           .order('id')
