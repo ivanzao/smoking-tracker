@@ -810,3 +810,22 @@ describe('useTracker — applySyncChanges', () => {
     });
   });
 });
+
+describe('useTracker — other tabs', () => {
+  it('picks up what another tab saved', () => {
+    const { result } = renderHook(() => useTracker());
+    const fromOtherTab: TrackerEvent = {
+      id: 'other',
+      timestamp: '2026-04-08T12:00:00-03:00',
+      type: 'tobacco',
+    };
+    const saved = JSON.stringify({ events: [fromOtherTab], goals: [], streakResetDay: null, days: [] });
+    localStorage.setItem(STORAGE_KEY, saved);
+
+    act(() => {
+      window.dispatchEvent(new StorageEvent('storage', { key: STORAGE_KEY, newValue: saved }));
+    });
+
+    expect(result.current.events).toEqual([fromOtherTab]);
+  });
+});

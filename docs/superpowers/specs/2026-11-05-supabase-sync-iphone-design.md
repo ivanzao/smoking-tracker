@@ -60,6 +60,16 @@ interface LedgerEntry {
 - Mudanças locais são detectadas comparando o estado com o ledger **a cada alteração de estado**, não na hora de sincronizar. Assim `updatedAt` guarda a hora real de uma edição offline, e `useTracker` não precisa mudar em cada mutação.
 - Exclusão já enviada sai do ledger. Um desfazer logo depois vira um registro novo e limpa `deleted_at` no banco.
 
+## Ao abrir o app
+
+Antes de tudo, o ledger é alinhado com o estado salvo. Nesse momento ninguém editou nada, então qualquer diferença **nunca é ação do usuário**: é primeiro login, armazenamento perdido ou queda do app entre gravar o ledger e gravar o estado.
+
+- Registro sem entrada no ledger, ou com hash diferente, recebe a hora de edição mais antiga possível. Assim o banco vence se tiver esse registro, e ele sobe se o banco não tiver.
+- Entrada do ledger sem registro no estado é descartada, **sem virar exclusão**.
+- Se houve diferença, o cursor volta ao início e o próximo pull traz tudo de novo.
+
+Isso impede que um celular com cópia antiga sobrescreva dados novos no primeiro login, e que um `localStorage` perdido apague o banco.
+
 ## Ciclo de sincronização
 
 1. Registrar mudanças locais no ledger.
@@ -88,6 +98,8 @@ Roda ao abrir o app, ao voltar para ele, ao recuperar conexão e 1,5 s depois de
 
 Sair apaga os dados locais do aparelho e recarrega a página. Se houver registros não enviados, pede confirmação antes.
 
+Abas do mesmo navegador compartilham o ledger, então cada aba recarrega o estado quando outra salva. Sem isso, uma aba desatualizada leria como exclusão o que a outra adicionou.
+
 ## iPhone
 
 - `apple-touch-icon` em PNG 180×180 e ícones PNG 192 e 512 no manifest, porque o iOS não usa SVG.
@@ -104,4 +116,4 @@ Sair apaga os dados locais do aparelho e recarrega a página. Se houver registro
 
 - O relógio do aparelho decide conflitos. Relógios muito errados podem fazer a edição errada vencer.
 - Definir metas diferentes no mesmo dia, em dois aparelhos offline, cria duas metas com a mesma data.
-- Duas abas abertas no mesmo navegador continuam sem se atualizar entre si, como hoje.
+- Registros editados antes do primeiro login não têm hora de edição conhecida: se o banco tiver o mesmo id, o banco vence.

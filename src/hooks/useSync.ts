@@ -5,6 +5,7 @@ import {
   LEDGER_KEY,
   SyncChanges,
   SyncState,
+  adoptState,
   applyChanges,
   createLedgerStorage,
   pendingCount,
@@ -64,6 +65,7 @@ export function useSync(tracker: UseTrackerAPI): UseSyncAPI {
   // remote changes must not see the old state, or it would read them as local reverts
   const stateRef = useRef<SyncState>(syncState);
 
+  const adopted = useRef(false);
   const running = useRef(false);
   const runAgain = useRef(false);
 
@@ -130,6 +132,10 @@ export function useSync(tracker: UseTrackerAPI): UseSyncAPI {
   useEffect(() => {
     if (!supabase) return;
     stateRef.current = syncState;
+    if (!adopted.current) {
+      adopted.current = true;
+      adoptState(ledger, syncState);
+    }
     trackChanges(ledger, syncState, nowIso());
     const count = pendingCount(ledger);
     setPending(count);

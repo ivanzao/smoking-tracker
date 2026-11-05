@@ -1,3 +1,4 @@
+import { isValid, parseISO } from 'date-fns';
 import { DayNote, DayRecord, GoalEntry, TrackerEvent } from '@/types';
 import { addDayNote, isValidDayRecord, removeDayNote } from '@/lib/days';
 import { isValidEvent, isValidGoal } from '@/lib/export';
@@ -45,7 +46,7 @@ interface LedgerEntry {
   deleted: boolean;
 }
 
-interface Ledger {
+export interface Ledger {
   cursor: string | null;
   entries: Record<string, LedgerEntry>;
 }
@@ -66,7 +67,7 @@ export function createLedgerStorage(): LedgerStore {
         const parsed = JSON.parse(localStorage.getItem(LEDGER_KEY) ?? 'null');
         return parsed?.entries ? parsed : emptyLedger();
       } catch {
-        // Losing the ledger is safe: every record is re-sent and matched by id
+        // Safe to lose: adoptState rebuilds it, and the server wins on any difference
         return emptyLedger();
       }
     },
@@ -74,25 +75,19 @@ export function createLedgerStorage(): LedgerStore {
   };
 }
 
-export function createLedgerMemory(): LedgerStore {
-  let ledger = emptyLedger();
-  return {
-    load: () => ledger,
-    save: (next) => {
-      ledger = next;
-    },
-  };
-}
-
 const keyOf = (r: { kind: string; id: string }) => `${r.kind}:${r.id}`;
 
 const STREAK_RESET_ID = 'current';
+/** For records whose real edit time can't be known: loses to any dated edit. */
+const UNKNOWN_EDIT_TIME = new Date(0).toISOString();
 const PUSH_BATCH_SIZE = 500;
 const DAY_KEY_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 /** Rows come from outside the app; a bad one must not reach code that assumes valid data. */
 function isValidRecord({ kind, id, data }: SyncRecord): boolean {
-  if (kind === 'event') return isValidEvent(data) && data.id === id;
+  if (kind === 'event') {
+    return isValidEvent(data) && data.id === id && isValid(parseISO(data.timestamp));
+  }
   if (kind === 'goal') return isValidGoal(data) && data.id === id;
   if (kind === 'note') {
     const { dayKey, note } = (data ?? {}) as { dayKey?: unknown; note?: { id?: unknown } };
@@ -179,6 +174,42 @@ export function trackChanges(store: LedgerStore, state: SyncState, now: string):
   if (changed) store.save({ ...ledger, entries });
 }
 
+/**
+ * Line up the ledger with the state found on disk; call once when the app opens.
+ *
+ * Nobody has edited anything yet, so a difference here is never a user action: it is a
+ * first login, lost storage, or a crash between saving the ledger and saving the state.
+ * Differences get the oldest possible edit time and the cursor rewinds, so the server wins
+ * wherever it has the record, and nothing missing from the state becomes a delete.
+ */
+export function adoptState(store: LedgerStore, state: SyncState): void {
+  const ledger = store.load();
+  const entries = { ...ledger.entries };
+  const live = new Set<string>();
+  let diverged = false;
+
+  for (const record of toRecords(state)) {
+    const key = keyOf(record);
+    live.add(key);
+    const hash = hashOf(record.data);
+    const entry = entries[key];
+    if (entry?.deleted) continue;
+    if (!entry || entry.hash !== hash) {
+      entries[key] = { hash, updatedAt: UNKNOWN_EDIT_TIME, dirty: true, deleted: false };
+      diverged = true;
+    }
+  }
+
+  for (const [key, entry] of Object.entries(entries)) {
+    if (!live.has(key) && !entry.deleted) {
+      delete entries[key];
+      diverged = true;
+    }
+  }
+
+  if (diverged) store.save({ cursor: null, entries });
+}
+
 export function pendingCount(store: LedgerStore): number {
   return Object.values(store.load().entries).filter((e) => e.dirty).length;
 }
@@ -228,7 +259,7 @@ interface RunSyncOptions {
 }
 
 export async function runSync(options: RunSyncOptions): Promise<void> {
-  const { remote, ledger: store, getState, now } = options;
+  const { remote, ledger: store, getState, now, applyChanges: applyToState } = options;
   trackChanges(store, getState(), now());
 
   const pulled = await remote.pull(store.load().cursor);
@@ -274,7 +305,7 @@ export async function runSync(options: RunSyncOptions): Promise<void> {
 
   // Before applying: otherwise the applied rows would look like local edits
   store.save({ cursor, entries });
-  if (changes.upserts.length > 0 || changes.deletes.length > 0) options.applyChanges(changes);
+  if (changes.upserts.length > 0 || changes.deletes.length > 0) applyToState(changes);
 
   const current = store.load();
   const byKey = new Map(toRecords(getState()).map((r) => [keyOf(r), r]));

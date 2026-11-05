@@ -179,6 +179,21 @@ export function useTracker(): UseTrackerAPI {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ events, goals, streakResetDay, days }));
   }, [events, goals, streakResetDay, days]);
 
+  // The sync ledger is shared between tabs, so a tab holding old state would read
+  // what another tab added as deletions
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key !== STORAGE_KEY || e.newValue === null) return;
+      const next = loadFromStorage();
+      setEvents(next.events);
+      setGoals(next.goals);
+      setStreakResetDay(next.streakResetDay);
+      setDays(next.days);
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
+
   const addEvent = useCallback<UseTrackerAPI['addEvent']>((input) => {
     const id = uuidv4();
     const event: TrackerEvent = {

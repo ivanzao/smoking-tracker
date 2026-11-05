@@ -1,17 +1,29 @@
 import { describe, it, expect } from 'vitest';
 import {
+  Ledger,
+  LedgerStore,
   PushRow,
   RemoteRow,
   RemoteStore,
   SyncChanges,
   SyncState,
+  adoptState,
   applyChanges,
-  createLedgerMemory,
   pendingCount,
   runSync,
   trackChanges,
 } from './engine';
 import { GoalEntry, TrackerEvent } from '@/types';
+
+function createLedgerMemory(): LedgerStore {
+  let ledger: Ledger = { cursor: null, entries: {} };
+  return {
+    load: () => ledger,
+    save: (next) => {
+      ledger = next;
+    },
+  };
+}
 
 const EMPTY: SyncState = { events: [], goals: [], days: [], streakResetDay: null };
 
@@ -63,18 +75,30 @@ class FakeRemote implements RemoteStore {
   }
 }
 
-function createDevice(remote: RemoteStore, initial: Partial<SyncState> = {}) {
+function createDevice(
+  remote: RemoteStore,
+  initial: Partial<SyncState> = {},
+  firstOpenedAt = '2026-11-05T12:00:00.000Z',
+) {
   let state: SyncState = { ...EMPTY, ...initial };
   const ledger = createLedgerMemory();
-  let clock = '2026-11-05T12:00:00.000Z';
+  let clock = firstOpenedAt;
 
   const track = () => trackChanges(ledger, state, clock);
+  adoptState(ledger, state);
   track();
 
   return {
     ledger,
     get state() {
       return state;
+    },
+    /** Close and reopen the app with whatever state survived on disk. */
+    reopen(surviving: SyncState, at = '2026-11-05T19:00:00.000Z') {
+      clock = at;
+      state = surviving;
+      adoptState(ledger, state);
+      track();
     },
     /** Change local state at a given moment, the way useSync reports each state change. */
     edit(at: string, change: (s: SyncState) => SyncState) {
@@ -337,5 +361,108 @@ describe('sync between devices', () => {
     expect(sizes).toEqual([500, 500, 200]);
     expect(remote.rows.size).toBe(1200);
     expect(pendingCount(pc.ledger)).toBe(0);
+  });
+
+  it('does not let an old local copy overwrite newer data on first login', async () => {
+    const remote = new FakeRemote();
+    const oldCopy = [event('e1'), event('e2')];
+    const pc = createDevice(remote, { events: oldCopy });
+    await pc.sync();
+    pc.edit('2026-11-05T13:00:00.000Z', () => ({
+      ...EMPTY,
+      events: [event('e1', { location: 'novo' })],
+    }));
+    await pc.sync();
+
+    const iphone = createDevice(remote, { events: oldCopy }, '2026-11-05T20:00:00.000Z');
+    await iphone.sync();
+    await pc.sync('2026-11-05T21:00:00.000Z');
+
+    expect(iphone.state.events).toEqual([event('e1', { location: 'novo' })]);
+    expect(pc.state.events).toEqual([event('e1', { location: 'novo' })]);
+  });
+
+  it('still uploads local records the server has never seen on a later first login', async () => {
+    const remote = new FakeRemote();
+    const pc = createDevice(remote, { events: [event('e1')] });
+    await pc.sync();
+
+    const iphone = createDevice(remote, { events: [event('only-here')] });
+    await iphone.sync();
+    await pc.sync();
+
+    expect(pc.state.events.map((e) => e.id).sort()).toEqual(['e1', 'only-here']);
+    expect(iphone.state.events.map((e) => e.id).sort()).toEqual(['e1', 'only-here']);
+  });
+
+  it('restores from the server, without deleting anything, when local data was lost', async () => {
+    const remote = new FakeRemote();
+    const pc = createDevice(remote, { events: [event('e1'), event('e2')] });
+    await pc.sync();
+    await pc.sync();
+
+    pc.reopen(EMPTY);
+    await pc.sync();
+
+    expect(pc.state.events.map((e) => e.id)).toEqual(['e1', 'e2']);
+    expect(remote.rows.get('event:e1')?.deleted_at).toBeNull();
+    expect(remote.rows.get('event:e2')?.deleted_at).toBeNull();
+  });
+
+  it('recovers when the app dies after recording a remote change but before saving it', async () => {
+    const remote = new FakeRemote();
+    const pc = createDevice(remote, { events: [event('e1')] });
+    const iphone = createDevice(remote);
+    await pc.sync();
+    await iphone.sync();
+    const beforeTheChange = iphone.state;
+
+    pc.edit('2026-11-05T13:00:00.000Z', (s) => ({
+      ...s,
+      events: [event('e1', { location: 'novo' })],
+    }));
+    await pc.sync();
+    await iphone.sync();
+
+    iphone.reopen(beforeTheChange);
+    await iphone.sync('2026-11-05T20:00:00.000Z');
+    await pc.sync('2026-11-05T21:00:00.000Z');
+
+    expect(iphone.state.events[0].location).toBe('novo');
+    expect(pc.state.events[0].location).toBe('novo');
+  });
+
+  it('keeps a pending offline edit and delete across a restart', async () => {
+    const remote = new FakeRemote();
+    const pc = createDevice(remote, { events: [event('e1'), event('e2')] });
+    const iphone = createDevice(remote);
+    await pc.sync();
+    await iphone.sync();
+
+    iphone.edit('2026-11-05T13:00:00.000Z', () => ({
+      ...EMPTY,
+      events: [event('e1', { location: 'offline' })],
+    }));
+    iphone.reopen(iphone.state);
+    await iphone.sync();
+    await pc.sync();
+
+    expect(pc.state.events).toEqual([event('e1', { location: 'offline' })]);
+  });
+
+  it('ignores an event whose timestamp would crash date formatting', async () => {
+    const remote = new FakeRemote();
+    remote.inject({
+      kind: 'event',
+      id: 'bad',
+      data: event('bad', { timestamp: 'ontem' }),
+      updated_at: '2026-11-05T12:00:00.000Z',
+      deleted_at: null,
+    });
+    const iphone = createDevice(remote);
+
+    await iphone.sync();
+
+    expect(iphone.state.events).toEqual([]);
   });
 });

@@ -8,23 +8,26 @@ const CURSOR_OVERLAP_MS = 60_000;
 export function createSupabaseRemote(client: SupabaseClient, userId: string): RemoteStore {
   return {
     async pull(since) {
-      const rows: RemoteRow[] = [];
-      for (let from = 0; ; from += PAGE_SIZE) {
+      // Keyset paging: with offsets, a row updated mid-pull shifts the others and one gets skipped
+      const rows = new Map<string, RemoteRow>();
+      let after = since
+        ? new Date(Date.parse(since) - CURSOR_OVERLAP_MS).toISOString()
+        : null;
+      for (;;) {
         let query = client
           .from('records')
           .select('kind, id, data, updated_at, deleted_at, synced_at')
           .order('synced_at')
           .order('kind')
           .order('id')
-          .range(from, from + PAGE_SIZE - 1);
-        if (since) {
-          const after = new Date(Date.parse(since) - CURSOR_OVERLAP_MS).toISOString();
-          query = query.gt('synced_at', after);
-        }
+          .limit(PAGE_SIZE);
+        if (after) query = query.gte('synced_at', after);
         const { data, error } = await query;
         if (error) throw error;
-        rows.push(...(data as RemoteRow[]));
-        if (data.length < PAGE_SIZE) return rows;
+        const page = data as RemoteRow[];
+        for (const row of page) rows.set(`${row.kind}:${row.id}`, row);
+        if (page.length < PAGE_SIZE) return [...rows.values()];
+        after = page[page.length - 1].synced_at;
       }
     },
 

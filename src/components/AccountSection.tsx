@@ -8,7 +8,7 @@ interface AccountSectionProps {
 function syncSummary({ syncing, failed, pending, status }: UseSyncAPI): string {
   if (status === 'expired') return 'Sem login: salvando só neste aparelho';
   if (syncing) return 'Sincronizando…';
-  if (failed) return 'Não foi possível sincronizar. Tentamos de novo em breve';
+  if (failed) return 'Não foi possível sincronizar. Tentamos de novo ao voltar para o app';
   if (pending > 0) return `${pending} ${pending === 1 ? 'registro' : 'registros'} a enviar`;
   return 'Tudo sincronizado';
 }
