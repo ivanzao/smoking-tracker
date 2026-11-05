@@ -109,7 +109,7 @@ Abas do mesmo navegador compartilham o ledger, então cada aba recarrega o estad
 ## Configuração
 
 - Variáveis `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` no build, vindas de variáveis do repositório no GitHub. A chave `anon` é pública por natureza.
-- Os templates de e-mail do Supabase precisam usar `{{ .Token }}`, senão chega um link em vez do código.
+- Os templates de e-mail do Supabase precisam usar `{{ .Token }}`, senão chega um link em vez do código. Editá-los exige SMTP próprio; o projeto usa o Resend com o remetente de teste, que só entrega para o e-mail da conta Resend.
 - Enquanto as variáveis não existirem, o deploy continua funcionando só local.
 
 ## Defesas adicionais
