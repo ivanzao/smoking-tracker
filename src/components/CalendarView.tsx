@@ -1,25 +1,7 @@
-import { useMemo, useState } from 'react';
 import { cn } from '@/lib/utils';
-import { Card } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  format,
-  parseISO,
-  startOfMonth,
-  endOfMonth,
-  subDays,
-  addMonths,
-  subMonths,
-} from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { MonthlyChart } from './MonthlyChart';
-import {
-  getDaysInRange,
-  getEarliestEventMonth,
-  getMonthKey,
-  todayKey,
-} from '@/lib/events';
-import { DayTotals, TrackerEvent } from '@/types';
+import { DayTotals } from '@/types';
 import { DayGoalStatus } from '@/lib/stats';
 
 export interface DayCellProps {
@@ -44,40 +26,56 @@ export const DayCell = ({
   const isToday = dayKey === todayStr;
   const date = parseISO(dayKey + 'T00:00:00');
   const goalStatus = getDayGoalStatus(dayKey);
-  const weekday = format(date, 'EEE', { locale: ptBR }).slice(0, 3);
+  const isFuture = goalStatus === 'future';
 
   const bgClass =
     goalStatus === 'within' ? 'bg-primary text-primary-foreground'
-    : goalStatus === 'over' ? 'bg-foreground text-card'
+    : goalStatus === 'over' ? 'bg-card bg-hatch text-foreground'
+    : isFuture ? 'bg-transparent text-muted-foreground border-dashed border-muted-foreground'
     : 'bg-card text-foreground';
 
+  const description = [
+    format(date, "d 'de' MMMM", { locale: ptBR }),
+    `${total} ${total === 1 ? 'registro' : 'registros'}`,
+    STATUS_LABEL[goalStatus],
+    hasNotes ? 'com anotações' : null,
+  ].filter(Boolean).join(', ');
+
   return (
-    <div
+    <button
+      type="button"
+      disabled={isFuture}
       onClick={() => onDayClick(dayKey)}
+      aria-label={description}
+      aria-current={isToday ? 'date' : undefined}
       className={cn(
-        'relative flex flex-col items-center gap-1 p-2 border-2 border-border cursor-pointer active:translate-x-[1px] active:translate-y-[1px] transition-transform',
+        'relative min-h-12 flex flex-col items-center justify-center p-1 border-2 border-border active:translate-x-[1px] active:translate-y-[1px] transition-transform disabled:active:translate-x-0 disabled:active:translate-y-0',
         bgClass,
         isToday && 'shadow-brutal',
-        total === 0 && goalStatus === 'no-goal' && 'opacity-60',
       )}
     >
       {hasNotes && (
         <span
-          aria-label="Dia com anotações"
+          aria-hidden="true"
           className="material-symbols-outlined absolute top-0.5 right-0.5 text-[0.7rem] leading-none"
         >
           sticky_note_2
         </span>
       )}
-      <div className="text-[0.55rem] font-bold uppercase">{weekday}</div>
-      <div className="text-[0.7rem] font-bold">{format(date, 'dd')}</div>
-      {total > 0 ? (
-        <div className="text-[0.7rem] font-bold">{total}</div>
-      ) : (
-        <span className="text-[0.6rem]">—</span>
+      <span className="text-sm font-bold leading-tight">{format(date, 'd')}</span>
+      {!isFuture && (
+        <span className="text-xs font-semibold leading-tight tabular-nums">{total > 0 ? total : '–'}</span>
       )}
-    </div>
+    </button>
   );
+};
+
+const STATUS_LABEL: Record<DayGoalStatus, string | null> = {
+  within: 'dentro da meta',
+  over: 'acima da meta',
+  empty: null,
+  future: null,
+  'no-goal': null,
 };
 
 export interface MonthNavigationProps {
@@ -100,141 +98,18 @@ export const MonthNavigation = ({
       onClick={onBack}
       disabled={!canGoBack}
       aria-label="Mês anterior"
-      className="w-8 h-8 flex items-center justify-center bg-card border-2 border-border shadow-brutal-sm active:translate-x-[1px] active:translate-y-[1px] active:shadow-none transition-transform disabled:opacity-30"
+      className="w-11 h-11 flex items-center justify-center bg-card border-2 border-border shadow-brutal-sm active:translate-x-[1px] active:translate-y-[1px] active:shadow-none transition-transform disabled:opacity-30"
     >
-      <span className="material-symbols-outlined text-sm">chevron_left</span>
+      <span aria-hidden="true" className="material-symbols-outlined text-sm">chevron_left</span>
     </button>
     <span className="text-sm font-bold uppercase tracking-wider capitalize">{label}</span>
     <button
       onClick={onForward}
       disabled={!canGoForward}
       aria-label="Próximo mês"
-      className="w-8 h-8 flex items-center justify-center bg-card border-2 border-border shadow-brutal-sm active:translate-x-[1px] active:translate-y-[1px] active:shadow-none transition-transform disabled:opacity-30"
+      className="w-11 h-11 flex items-center justify-center bg-card border-2 border-border shadow-brutal-sm active:translate-x-[1px] active:translate-y-[1px] active:shadow-none transition-transform disabled:opacity-30"
     >
-      <span className="material-symbols-outlined text-sm">chevron_right</span>
+      <span aria-hidden="true" className="material-symbols-outlined text-sm">chevron_right</span>
     </button>
   </div>
 );
-
-interface CalendarViewProps {
-  getDayTotals: (dayKey: string) => DayTotals;
-  getDayGoalStatus: (dayKey: string) => DayGoalStatus;
-  onDayClick: (dayKey: string) => void;
-  events: TrackerEvent[];
-  goalLimit: number | null;
-  className?: string;
-}
-
-export const CalendarView = ({ getDayTotals, getDayGoalStatus, onDayClick, events, goalLimit, className }: CalendarViewProps) => {
-  const today = new Date();
-  const [viewMonth, setViewMonth] = useState<Date>(() => startOfMonth(new Date()));
-
-  const earliest = useMemo(() => getEarliestEventMonth(events), [events]);
-  const currentMonthKey = getMonthKey(today);
-  const viewMonthKey = getMonthKey(viewMonth);
-
-  const canGoBack = earliest !== null && viewMonth > earliest;
-  const canGoForward = viewMonthKey !== currentMonthKey;
-
-  const goBack = () => {
-    if (canGoBack) setViewMonth((m) => subMonths(m, 1));
-  };
-  const goForward = () => {
-    if (canGoForward) setViewMonth((m) => addMonths(m, 1));
-  };
-
-  const weekDays = getDaysInRange(subDays(today, 6), today);
-  const monthDays = getDaysInRange(startOfMonth(viewMonth), endOfMonth(viewMonth));
-  const todayStr = todayKey();
-
-  const monthLabel = format(viewMonth, 'MMMM yyyy', { locale: ptBR });
-
-  return (
-    <Card
-      className={cn("p-4 sm:p-6 sm:flex sm:flex-col", className)}
-    >
-      {/* Mobile: tabs (semana / mês) */}
-      <div className="sm:hidden">
-        <Tabs defaultValue="week" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-6">
-            <TabsTrigger value="week">Semana</TabsTrigger>
-            <TabsTrigger value="month">Mês</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="week" className="mt-0">
-            <div className="grid grid-cols-7 gap-1.5">
-              {weekDays.map((d) => (
-                <DayCell
-                  key={d}
-                  dayKey={d}
-                  getDayTotals={getDayTotals}
-                  getDayGoalStatus={getDayGoalStatus}
-                  onDayClick={onDayClick}
-                  todayStr={todayStr}
-                />
-              ))}
-            </div>
-          </TabsContent>
-
-          <TabsContent value="month" className="mt-0">
-            <MonthNavigation
-              label={monthLabel}
-              canGoBack={canGoBack}
-              canGoForward={canGoForward}
-              onBack={goBack}
-              onForward={goForward}
-            />
-            <MonthlyChart dayKeys={monthDays} getDayTotals={getDayTotals} onDayClick={onDayClick} events={events} goalLimit={goalLimit} />
-          </TabsContent>
-        </Tabs>
-      </div>
-
-      {/* Desktop: semana + mês empilhados, preenchendo a altura */}
-      <div className="hidden sm:flex flex-col flex-1 min-h-0 gap-0">
-        {/* Últimos 7 dias */}
-        <div className="shrink-0">
-          <p className="text-xs font-bold uppercase tracking-wider mb-3">
-            Últimos 7 dias
-          </p>
-          <div className="grid grid-cols-7 gap-2">
-            {weekDays.map((d) => (
-              <DayCell
-                key={d}
-                dayKey={d}
-                getDayTotals={getDayTotals}
-                getDayGoalStatus={getDayGoalStatus}
-                onDayClick={onDayClick}
-                todayStr={todayStr}
-              />
-            ))}
-          </div>
-        </div>
-
-        <div className="my-5 border-t-2 border-border shrink-0" />
-
-        {/* Gráfico mensal — preenche o restante */}
-        <div className="flex-1 min-h-0 flex flex-col">
-          <div className="shrink-0 mb-3">
-            <MonthNavigation
-              label={monthLabel}
-              canGoBack={canGoBack}
-              canGoForward={canGoForward}
-              onBack={goBack}
-              onForward={goForward}
-            />
-          </div>
-          <div className="flex-1 min-h-0">
-            <MonthlyChart
-              dayKeys={monthDays}
-              getDayTotals={getDayTotals}
-              onDayClick={onDayClick}
-              events={events}
-              goalLimit={goalLimit}
-              className="h-full"
-            />
-          </div>
-        </div>
-      </div>
-    </Card>
-  );
-};

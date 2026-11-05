@@ -5,6 +5,8 @@ import {
   getCurrentGoal,
   getDayGoalStatus,
   getCurrentStreak,
+  describeTrend,
+  formatAverage,
   getDaysWithinGoal,
   getRollingAverage,
   getAverageDelta,
@@ -100,9 +102,21 @@ describe('getDayGoalStatus', () => {
     expect(getDayGoalStatus(events, goals, '2026-04-08')).toBe('over');
   });
 
-  it('returns within for a day with zero events', () => {
+  it('returns empty for a past day with zero events', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-04-10T14:00:00Z'));
     const goals = [mkGoal({ effectiveFrom: '2026-04-01', limit: 5 })];
-    expect(getDayGoalStatus([], goals, '2026-04-08')).toBe('within');
+    expect(getDayGoalStatus([], goals, '2026-04-08')).toBe('empty');
+    vi.useRealTimers();
+  });
+
+  it('returns future for a day after today, with or without a goal', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-04-10T14:00:00Z'));
+    const goals = [mkGoal({ effectiveFrom: '2026-04-01', limit: 5 })];
+    expect(getDayGoalStatus([], goals, '2026-04-11')).toBe('future');
+    expect(getDayGoalStatus([], [], '2026-04-11')).toBe('future');
+    vi.useRealTimers();
   });
 });
 
@@ -143,7 +157,7 @@ describe('getCurrentStreak', () => {
       mkEvent({ id: '3', timestamp: '2026-04-09T10:00:00-03:00' }),
       mkEvent({ id: '4', timestamp: '2026-04-10T08:00:00-03:00' }),
     ];
-    expect(getCurrentStreak(events, goals)).toBe(10);
+    expect(getCurrentStreak(events, goals)).toBe(3);
   });
 
   it('stops at the first over day going backward', () => {
@@ -179,28 +193,55 @@ describe('getCurrentStreak', () => {
   it('counts only days after the reset marker', () => {
     vi.setSystemTime(new Date('2026-04-12T14:00:00Z'));
     const goals = [mkGoal({ effectiveFrom: '2026-04-01', limit: 5 })];
-    expect(getCurrentStreak([], goals, '2026-04-10')).toBe(2);
+    const events = [
+      mkEvent({ id: '1', timestamp: '2026-04-10T08:00:00-03:00' }),
+      mkEvent({ id: '2', timestamp: '2026-04-11T08:00:00-03:00' }),
+      mkEvent({ id: '3', timestamp: '2026-04-12T08:00:00-03:00' }),
+    ];
+    expect(getCurrentStreak(events, goals, '2026-04-10')).toBe(2);
   });
 
   it('ignores a reset marker older than the natural streak start', () => {
     vi.setSystemTime(new Date('2026-04-10T14:00:00Z'));
     const goals = [mkGoal({ effectiveFrom: '2026-04-09', limit: 10 })];
-    expect(getCurrentStreak([], goals, '2026-04-01')).toBe(2);
+    const events = [
+      mkEvent({ id: '1', timestamp: '2026-04-09T08:00:00-03:00' }),
+      mkEvent({ id: '2', timestamp: '2026-04-10T08:00:00-03:00' }),
+    ];
+    expect(getCurrentStreak(events, goals, '2026-04-01')).toBe(2);
   });
 
   it('treats a null reset marker as no reset', () => {
     vi.setSystemTime(new Date('2026-04-10T14:00:00Z'));
     const goals = [mkGoal({ effectiveFrom: '2026-04-09', limit: 10 })];
-    expect(getCurrentStreak([], goals, null)).toBe(2);
+    const events = [
+      mkEvent({ id: '1', timestamp: '2026-04-09T08:00:00-03:00' }),
+      mkEvent({ id: '2', timestamp: '2026-04-10T08:00:00-03:00' }),
+    ];
+    expect(getCurrentStreak(events, goals, null)).toBe(2);
   });
 
-  it('counts days with zero events as within', () => {
+  it('days with zero events neither add to nor break the streak', () => {
     vi.setSystemTime(new Date('2026-04-10T14:00:00Z'));
     const goals = [mkGoal({ effectiveFrom: '2026-04-01', limit: 5 })];
     const events = [
-      mkEvent({ id: '1', timestamp: '2026-04-10T08:00:00-03:00' }),
+      mkEvent({ id: '1', timestamp: '2026-04-06T08:00:00-03:00' }),
+      mkEvent({ id: '2', timestamp: '2026-04-10T08:00:00-03:00' }),
     ];
-    expect(getCurrentStreak(events, goals)).toBe(10);
+    expect(getCurrentStreak(events, goals)).toBe(2);
+  });
+
+  it('keeps the streak on a morning with nothing logged yet', () => {
+    vi.setSystemTime(new Date('2026-04-10T14:00:00Z'));
+    const goals = [mkGoal({ effectiveFrom: '2026-04-01', limit: 5 })];
+    const events = [mkEvent({ id: '1', timestamp: '2026-04-09T08:00:00-03:00' })];
+    expect(getCurrentStreak(events, goals)).toBe(1);
+  });
+
+  it('is 0 when nothing was ever logged', () => {
+    vi.setSystemTime(new Date('2026-04-10T14:00:00Z'));
+    const goals = [mkGoal({ effectiveFrom: '2026-01-01', limit: 5 })];
+    expect(getCurrentStreak([], goals)).toBe(0);
   });
 
   it('handles 5+ consecutive day scenario', () => {
@@ -216,7 +257,7 @@ describe('getCurrentStreak', () => {
       mkEvent({ id: '7', timestamp: '2026-04-07T12:00:00-03:00' }),
       mkEvent({ id: '8', timestamp: '2026-04-08T08:00:00-03:00' }),
     ];
-    expect(getCurrentStreak(events, goals)).toBe(8);
+    expect(getCurrentStreak(events, goals)).toBe(5);
   });
 });
 
@@ -318,20 +359,46 @@ describe('getDaysWithinGoal', () => {
     vi.setSystemTime(new Date('2026-04-10T14:00:00Z'));
     const goals = [mkGoal({ effectiveFrom: '2026-04-06', limit: 1 })];
     const events = [
-      // 04-07 over, 04-09 over; 04-06, 04-08 and 04-10 within
+      // 04-07 and 04-09 over, 04-10 within; 04-06 and 04-08 empty, so they don't count
       mkEvent({ id: '1', timestamp: '2026-04-07T08:00:00-03:00' }),
       mkEvent({ id: '2', timestamp: '2026-04-07T10:00:00-03:00' }),
       mkEvent({ id: '3', timestamp: '2026-04-09T08:00:00-03:00' }),
       mkEvent({ id: '4', timestamp: '2026-04-09T10:00:00-03:00' }),
       mkEvent({ id: '5', timestamp: '2026-04-10T08:00:00-03:00' }),
     ];
-    expect(getDaysWithinGoal(events, goals)).toBe(3);
+    expect(getDaysWithinGoal(events, goals)).toBe(1);
     expect(getCurrentStreak(events, goals)).toBe(1);
   });
 
   it('ignores days before the first goal', () => {
     vi.setSystemTime(new Date('2026-04-10T14:00:00Z'));
     const goals = [mkGoal({ effectiveFrom: '2026-04-09', limit: 5 })];
-    expect(getDaysWithinGoal([], goals)).toBe(2);
+    const events = [
+      mkEvent({ id: '1', timestamp: '2026-04-08T08:00:00-03:00' }),
+      mkEvent({ id: '2', timestamp: '2026-04-09T08:00:00-03:00' }),
+    ];
+    expect(getDaysWithinGoal(events, goals)).toBe(1);
+  });
+});
+
+describe('describeTrend', () => {
+  it('asks for more data when there is nothing to compare with', () => {
+    expect(describeTrend(null)).toMatch(/duas semanas/);
+  });
+
+  it('states a reduction and an increase in the same neutral form', () => {
+    expect(describeTrend(-0.124)).toBe('12% a menos que na semana anterior');
+    expect(describeTrend(0.3)).toBe('30% a mais que na semana anterior');
+  });
+
+  it('treats a change that rounds to zero as no change', () => {
+    expect(describeTrend(0.004)).toBe('Igual à semana anterior');
+  });
+});
+
+describe('formatAverage', () => {
+  it('uses a decimal comma and one digit', () => {
+    expect(formatAverage(20.64)).toBe('20,6');
+    expect(formatAverage(3)).toBe('3,0');
   });
 });

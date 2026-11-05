@@ -327,18 +327,21 @@ describe('useTracker — goals boot', () => {
     expect(result.current.goals).toEqual(goals);
   });
 
-  it('discards everything when goals array has invalid entry', () => {
-    const goals = [{ id: 'g1', limit: -1, effectiveFrom: '2026-04-01' }];
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ events: [], goals }));
+  it('keeps events and valid goals when one goal is invalid', () => {
+    const events = [{ id: 'a', timestamp: '2026-04-08T10:00:00-03:00', type: 'tobacco' }];
+    const valid = { id: 'g2', limit: 3, effectiveFrom: '2026-04-02' };
+    const goals = [{ id: 'g1', limit: -1, effectiveFrom: '2026-04-01' }, valid];
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ events, goals }));
     const { result } = renderHook(() => useTracker());
-    expect(result.current.events).toEqual([]);
-    expect(result.current.goals).toEqual([]);
+    expect(result.current.events).toEqual(events);
+    expect(result.current.goals).toEqual([valid]);
   });
 
-  it('discards everything when goals is not an array', () => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ events: [], goals: 'bad' }));
+  it('keeps events when goals is not an array', () => {
+    const events = [{ id: 'a', timestamp: '2026-04-08T10:00:00-03:00', type: 'tobacco' }];
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ events, goals: 'bad' }));
     const { result } = renderHook(() => useTracker());
-    expect(result.current.events).toEqual([]);
+    expect(result.current.events).toEqual(events);
     expect(result.current.goals).toEqual([]);
   });
 });
@@ -469,7 +472,8 @@ describe('useTracker — streak reset', () => {
   });
 
   it('loads a valid marker from storage', () => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ events: [], goals, streakResetDay: '2026-04-09' }));
+    const events = [{ id: 'a', timestamp: '2026-04-10T08:00:00-03:00', type: 'tobacco' }];
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ events, goals, streakResetDay: '2026-04-09' }));
     const { result } = renderHook(() => useTracker());
     expect(result.current.streakResetDay).toBe('2026-04-09');
     expect(result.current.getCurrentStreak()).toBe(1);
@@ -482,9 +486,13 @@ describe('useTracker — streak reset', () => {
   });
 
   it('resetStreak zeroes the streak today and persists the marker', () => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ events: [], goals }));
+    const events = [
+      { id: 'a', timestamp: '2026-04-09T08:00:00-03:00', type: 'tobacco' },
+      { id: 'b', timestamp: '2026-04-10T08:00:00-03:00', type: 'tobacco' },
+    ];
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ events, goals }));
     const { result } = renderHook(() => useTracker());
-    expect(result.current.getCurrentStreak()).toBe(10);
+    expect(result.current.getCurrentStreak()).toBe(2);
 
     act(() => { result.current.resetStreak(); });
     expect(result.current.streakResetDay).toBe('2026-04-10');
@@ -493,7 +501,8 @@ describe('useTracker — streak reset', () => {
   });
 
   it('streak resumes the day after a reset', () => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ events: [], goals, streakResetDay: '2026-04-10' }));
+    const events = [{ id: 'a', timestamp: '2026-04-11T08:00:00-03:00', type: 'tobacco' }];
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ events, goals, streakResetDay: '2026-04-10' }));
     const { result } = renderHook(() => useTracker());
     expect(result.current.getCurrentStreak()).toBe(0);
 
@@ -619,78 +628,68 @@ describe('useTracker — undo', () => {
     vi.useRealTimers();
   });
 
-  it('starts with pendingUndo as null', () => {
+  it('addEvent returns the event it created', () => {
     const { result } = renderHook(() => useTracker());
-    expect(result.current.pendingUndo).toBeNull();
+    let created: TrackerEvent | undefined;
+    act(() => { created = result.current.addEvent({ type: 'tobacco' }); });
+    expect(result.current.events[0]).toEqual(created);
   });
 
-  it('addEvent sets pendingUndo with type remove-event', () => {
+  it('undoing an older add removes that event, not the latest one', () => {
     const { result } = renderHook(() => useTracker());
-    act(() => { result.current.addEvent({ type: 'tobacco' }); });
-    expect(result.current.pendingUndo).toEqual({
-      type: 'remove-event',
-      eventId: result.current.events[0].id,
-    });
+    let first: TrackerEvent | undefined;
+    act(() => { first = result.current.addEvent({ type: 'tobacco' }); });
+    act(() => { result.current.addEvent({ type: 'cannabis' }); });
+    act(() => { result.current.removeEvent(first!.id); });
+    expect(result.current.events.map((e) => e.type)).toEqual(['cannabis']);
   });
 
-  it('executeUndo after addEvent removes the added event', () => {
-    const { result } = renderHook(() => useTracker());
-    act(() => { result.current.addEvent({ type: 'tobacco' }); });
-    expect(result.current.events).toHaveLength(1);
-    act(() => { result.current.executeUndo(); });
-    expect(result.current.events).toHaveLength(0);
-    expect(result.current.pendingUndo).toBeNull();
-  });
-
-  it('removeEvent sets pendingUndo with type restore-event', () => {
+  it('restoreEvent puts a removed event back in chronological order', () => {
     const seed: TrackerEvent[] = [
       { id: 'a', timestamp: '2026-04-08T10:00:00-03:00', type: 'tobacco', location: 'casa' },
+      { id: 'b', timestamp: '2026-04-08T11:00:00-03:00', type: 'tobacco' },
     ];
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ events: seed }));
     const { result } = renderHook(() => useTracker());
     act(() => { result.current.removeEvent('a'); });
-    expect(result.current.pendingUndo).toEqual({
-      type: 'restore-event',
-      event: seed[0],
-    });
+    act(() => { result.current.restoreEvent(seed[0]); });
+    expect(result.current.events).toEqual(seed);
   });
 
-  it('executeUndo after removeEvent restores the event', () => {
+  it('restoreEvent twice does not duplicate the event', () => {
     const seed: TrackerEvent[] = [
       { id: 'a', timestamp: '2026-04-08T10:00:00-03:00', type: 'tobacco' },
     ];
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ events: seed }));
     const { result } = renderHook(() => useTracker());
     act(() => { result.current.removeEvent('a'); });
-    expect(result.current.events).toHaveLength(0);
-    act(() => { result.current.executeUndo(); });
+    act(() => { result.current.restoreEvent(seed[0]); });
+    act(() => { result.current.restoreEvent(seed[0]); });
     expect(result.current.events).toHaveLength(1);
-    expect(result.current.events[0].id).toBe('a');
-    expect(result.current.pendingUndo).toBeNull();
   });
+});
 
-  it('new action overwrites previous pendingUndo', () => {
+describe('useTracker — clearAll', () => {
+  it('erases events, goals, notes and the streak marker, in memory and in storage', () => {
+    const state = {
+      events: [{ id: 'a', timestamp: '2026-04-08T10:00:00-03:00', type: 'tobacco' }],
+      goals: [{ id: 'g1', limit: 3, effectiveFrom: '2026-04-01' }],
+      days: [{
+        dayKey: '2026-04-08',
+        notes: [{ id: 'n1', text: 'nota', createdAt: '2026-04-08T10:00:00-03:00' }],
+      }],
+      streakResetDay: '2026-04-02',
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     const { result } = renderHook(() => useTracker());
-    act(() => { result.current.addEvent({ type: 'tobacco' }); });
-    const firstId = result.current.events[0].id;
-    act(() => { result.current.addEvent({ type: 'cannabis' }); });
-    expect(result.current.pendingUndo).toEqual({
-      type: 'remove-event',
-      eventId: result.current.events[1].id,
+    act(() => { result.current.clearAll(); });
+    expect(result.current.events).toEqual([]);
+    expect(result.current.goals).toEqual([]);
+    expect(result.current.days).toEqual([]);
+    expect(result.current.streakResetDay).toBeNull();
+    expect(JSON.parse(localStorage.getItem(STORAGE_KEY)!)).toEqual({
+      events: [], goals: [], streakResetDay: null, days: [],
     });
-    // Undo only removes the second event
-    act(() => { result.current.executeUndo(); });
-    expect(result.current.events).toHaveLength(1);
-    expect(result.current.events[0].id).toBe(firstId);
-  });
-
-  it('executeUndo is no-op when pendingUndo is null', () => {
-    const { result } = renderHook(() => useTracker());
-    act(() => { result.current.addEvent({ type: 'tobacco' }); });
-    act(() => { result.current.executeUndo(); });
-    // Already undone, second call is no-op
-    act(() => { result.current.executeUndo(); });
-    expect(result.current.events).toHaveLength(0);
   });
 });
 

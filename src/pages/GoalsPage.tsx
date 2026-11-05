@@ -9,7 +9,7 @@ interface GoalsPageProps {
 
 export const GoalsPage = ({ tracker, sync }: GoalsPageProps) => {
   return (
-    <main className="flex-1 px-6 pt-24 pb-32 overflow-y-auto max-w-lg mx-auto md:hidden">
+    <main className="flex-1 px-6 pt-page pb-page overflow-y-auto max-w-lg mx-auto md:hidden">
       <GoalsContent tracker={tracker} sync={sync} />
     </main>
   );

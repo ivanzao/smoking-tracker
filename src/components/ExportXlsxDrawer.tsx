@@ -99,7 +99,7 @@ export const ExportXlsxDrawer = ({ open, onOpenChange, onExport }: ExportXlsxDra
         </div>
       </div>
       {error && error !== 'empty' && (
-        <p className="text-[10px] font-bold uppercase tracking-wider text-destructive">
+        <p className="text-xs font-bold uppercase tracking-wider text-destructive">
           {RANGE_ERROR_MESSAGES[error]}
         </p>
       )}

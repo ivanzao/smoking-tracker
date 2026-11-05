@@ -1,17 +1,22 @@
-import { useMemo, useState } from 'react';
-import { format, startOfMonth, endOfMonth, subDays, addMonths, subMonths } from 'date-fns';
+import { Suspense, lazy, useMemo, useState } from 'react';
+import { format, getDay, startOfMonth, endOfMonth, subDays, addMonths, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { UseTrackerAPI } from '@/hooks/useTracker';
 import { getDaysInRange, getEarliestEventMonth, getMonthKey, todayKey } from '@/lib/events';
-import { MonthlyChart } from '@/components/MonthlyChart';
+import { describeTrend, formatAverage } from '@/lib/stats';
 import { DayCell, MonthNavigation } from '@/components/CalendarView';
+
+// Recharts is a big part of the bundle and only this screen needs it
+const MonthlyChart = lazy(() =>
+  import('@/components/MonthlyChart').then((m) => ({ default: m.MonthlyChart })),
+);
 
 interface HistoryPageProps {
   tracker: UseTrackerAPI;
   onOpenEditDay: (dayKey: string) => void;
 }
 
-const WEEK_HEADER = ['S', 'T', 'Q', 'Q', 'S', 'S', 'D'];
+const WEEK_HEADER = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
 
 export const HistoryPage = ({ tracker, onOpenEditDay }: HistoryPageProps) => {
   const today = new Date();
@@ -26,6 +31,8 @@ export const HistoryPage = ({ tracker, onOpenEditDay }: HistoryPageProps) => {
 
   const monthLabel = format(viewMonth, 'MMMM yyyy', { locale: ptBR });
   const monthDays = getDaysInRange(startOfMonth(viewMonth), endOfMonth(viewMonth));
+  // The grid starts on Monday, and getDay counts from Sunday
+  const leadingBlanks = (getDay(startOfMonth(viewMonth)) + 6) % 7;
 
   const streak = tracker.getCurrentStreak();
   const daysWithinGoal = tracker.getDaysWithinGoal();
@@ -42,7 +49,7 @@ export const HistoryPage = ({ tracker, onOpenEditDay }: HistoryPageProps) => {
   const todayStr = todayKey();
 
   return (
-    <main className="flex-1 px-6 pt-24 pb-32 overflow-y-auto md:pt-24 md:pl-8 md:pr-8 md:ml-80">
+    <main className="flex-1 px-6 pt-page pb-page overflow-y-auto md:pt-24 md:pl-8 md:pr-8 md:ml-80">
       {/* Hero stat */}
       <section className="mb-8">
         <div className="flex items-end gap-2 mb-1">
@@ -55,10 +62,10 @@ export const HistoryPage = ({ tracker, onOpenEditDay }: HistoryPageProps) => {
         </div>
         <p className="text-sm text-muted-foreground">
           {!currentGoal
-            ? 'Defina uma meta em Goals para acompanhar seu progresso.'
+            ? 'Defina uma meta em Metas para acompanhar seu progresso.'
             : streak === 0
-            ? 'Nenhum dia consecutivo ainda.'
-            : `${streak} dia${streak !== 1 ? 's' : ''} consecutivo${streak !== 1 ? 's' : ''} dentro da meta.`}
+            ? 'Dias com registro dentro da meta entram aqui.'
+            : `${streak} ${streak === 1 ? 'dia registrado' : 'dias registrados'} em sequência dentro da meta.`}
         </p>
       </section>
 
@@ -66,27 +73,24 @@ export const HistoryPage = ({ tracker, onOpenEditDay }: HistoryPageProps) => {
       <div className="grid grid-cols-2 gap-4 mb-8">
         <div className="bg-card border-2 border-border shadow-brutal p-5">
           <span className="text-xs font-bold uppercase tracking-wider block mb-4">
-            Esta semana
+            Últimos 7 dias
           </span>
           <div className="flex items-baseline gap-2">
             <span className="text-2xl font-bold">{weekTotal}</span>
-            <span className="text-xs text-muted-foreground">unidades</span>
+            <span className="text-xs text-muted-foreground">
+              {weekTotal === 1 ? 'registro' : 'registros'}
+            </span>
           </div>
           {delta7d !== null && (
-            <div className="mt-2 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider">
-              <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>
-                {delta7d <= 0 ? 'trending_down' : 'trending_up'}
-              </span>
-              <span>{Math.abs(delta7d * 100).toFixed(0)}% vs semana passada</span>
-            </div>
+            <p className="mt-2 text-xs font-semibold">{describeTrend(delta7d)}</p>
           )}
         </div>
         <div className="bg-card border-2 border-border shadow-brutal p-5">
           <span className="text-xs font-bold uppercase tracking-wider block mb-4">
-            Média 7d
+            Média diária
           </span>
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-bold">{avg7d.toFixed(1)}</span>
+            <span className="text-2xl font-bold">{formatAverage(avg7d)}</span>
             <span className="text-xs text-muted-foreground">por dia</span>
           </div>
         </div>
@@ -103,14 +107,16 @@ export const HistoryPage = ({ tracker, onOpenEditDay }: HistoryPageProps) => {
             onForward={() => setViewMonth((m) => addMonths(m, 1))}
           />
         </div>
-        <MonthlyChart
-          dayKeys={monthDays}
-          getDayTotals={tracker.getDayTotals}
-          onDayClick={onOpenEditDay}
-          events={tracker.events}
-          goalLimit={currentGoal?.limit ?? null}
-          className="h-[200px]"
-        />
+        <Suspense fallback={<div className="h-[220px]" />}>
+          <MonthlyChart
+            dayKeys={monthDays}
+            monthLabel={monthLabel}
+            getDayTotals={tracker.getDayTotals}
+            onDayClick={onOpenEditDay}
+            goalLimit={currentGoal?.limit ?? null}
+            className="h-[220px]"
+          />
+        </Suspense>
       </section>
 
       {/* Calendar grid */}
@@ -119,14 +125,17 @@ export const HistoryPage = ({ tracker, onOpenEditDay }: HistoryPageProps) => {
           Calendário
         </h2>
         <div className="bg-card border-2 border-border shadow-brutal p-4">
-          <div className="grid grid-cols-7 gap-2 mb-2">
-            {WEEK_HEADER.map((d, i) => (
-              <span key={i} className="text-[10px] text-center font-bold uppercase tracking-wider">
+          <div aria-hidden="true" className="grid grid-cols-7 gap-1 mb-2">
+            {WEEK_HEADER.map((d) => (
+              <span key={d} className="text-[11px] text-center font-bold uppercase">
                 {d}
               </span>
             ))}
           </div>
           <div className="grid grid-cols-7 gap-1">
+            {Array.from({ length: leadingBlanks }, (_, i) => (
+              <span key={i} aria-hidden="true" />
+            ))}
             {monthDays.map((dayKey) => (
               <DayCell
                 key={dayKey}
@@ -139,6 +148,22 @@ export const HistoryPage = ({ tracker, onOpenEditDay }: HistoryPageProps) => {
               />
             ))}
           </div>
+          {currentGoal && (
+            <ul className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-xs font-semibold">
+              <li className="flex items-center gap-1.5">
+                <span aria-hidden="true" className="w-4 h-4 border-2 border-border bg-primary" />
+                Dentro da meta
+              </li>
+              <li className="flex items-center gap-1.5">
+                <span aria-hidden="true" className="w-4 h-4 border-2 border-border bg-card bg-hatch" />
+                Acima da meta
+              </li>
+              <li className="flex items-center gap-1.5">
+                <span aria-hidden="true" className="w-4 h-4 border-2 border-border bg-card" />
+                Sem registro
+              </li>
+            </ul>
+          )}
         </div>
       </section>
 

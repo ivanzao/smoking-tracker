@@ -85,6 +85,8 @@ function dayKeyToExcelDate(dayKey: string): Date {
 const STATUS_LABEL: Record<DayGoalStatus, string> = {
   within: 'dentro',
   over: 'acima',
+  empty: 'sem registro',
+  future: '',
   'no-goal': 'sem meta',
 };
 

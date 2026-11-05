@@ -27,7 +27,7 @@
     --secondary:                 0  0% 100%;
     --secondary-foreground:      0  0%  7%;
 
-    --destructive:               0 84% 60%;   /* #EF4444 */
+    --destructive:               0 72% 42%;   /* #B81E1E */
     --destructive-foreground:    0  0% 100%;
 
     /* Borders / inputs / focus */
@@ -45,6 +45,7 @@
   }
 
   html {
+    overscroll-behavior-x: none;
     scrollbar-width: none;
     -ms-overflow-style: none;
   }
@@ -61,6 +62,14 @@
 
   .scrollbar-none::-webkit-scrollbar {
     display: none;
+  }
+
+  [data-sonner-toaster] {
+    font-family: inherit !important;
+  }
+
+  ::selection {
+    @apply bg-primary text-primary-foreground;
   }
 
   body {
@@ -81,6 +90,72 @@
   }
 }
 
+@layer utilities {
+  /* Layout around the fixed bars, respecting the notch and the home indicator */
+  .h-header {
+    height: calc(4rem + env(safe-area-inset-top));
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .top-header {
+    top: calc(4rem + env(safe-area-inset-top));
+  }
+
+  .h-bottom-nav {
+    height: calc(5rem + env(safe-area-inset-bottom));
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .pt-page {
+    padding-top: calc(6rem + env(safe-area-inset-top));
+  }
+
+  .pb-page {
+    padding-bottom: calc(8rem + env(safe-area-inset-bottom));
+  }
+
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .max-h-modal {
+    max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  }
+
+  /* Over the goal: a texture, so the state doesn't rest on color alone */
+  .bg-hatch {
+    background-image: repeating-linear-gradient(
+      45deg,
+      hsl(var(--foreground) / 0.22) 0 2px,
+      transparent 2px 7px
+    );
+  }
+}
+
+/* Keep the fade, drop the movement */
+@media (prefers-reduced-motion: reduce) {
+  [role='dialog'] {
+    --tw-enter-scale: 1;
+    --tw-exit-scale: 1;
+  }
+
+  [data-vaul-drawer][data-state='open'] {
+    animation: reduced-fade-in 0.15s ease-out !important;
+  }
+
+  [data-vaul-drawer][data-state='closed'] {
+    animation: reduced-fade-out 0.15s ease-in !important;
+  }
+
+  @keyframes reduced-fade-in {
+    from { opacity: 0; }
+  }
+
+  @keyframes reduced-fade-out {
+    to { opacity: 0; }
+  }
+}
+
 /* Material Symbols */
 .material-symbols-outlined {
   font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
@@ -91,13 +166,13 @@
   letter-spacing: normal;
   text-transform: none;
   display: inline-block;
+  /* Before the font loads the icon is its ligature text; don't let it push the layout */
+  width: 1em;
+  height: 1em;
+  overflow: hidden;
   white-space: nowrap;
   word-wrap: normal;
   direction: ltr;
   -webkit-font-smoothing: antialiased;
   user-select: none;
-}
-
-.material-symbols-filled {
-  font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }

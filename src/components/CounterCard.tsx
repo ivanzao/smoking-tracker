@@ -20,7 +20,7 @@ export const CounterCard = ({ type, count, onTap }: CounterCardProps) => {
       className="flex flex-col items-start gap-3 bg-card text-foreground p-5 border-2 border-border shadow-brutal active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-transform"
     >
       <div className="flex w-full justify-between items-center">
-        <span className="material-symbols-outlined text-2xl">{icon}</span>
+        <span aria-hidden="true" className="material-symbols-outlined text-2xl">{icon}</span>
         <span className="inline-block bg-primary text-primary-foreground border-2 border-border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider">
           {label}
         </span>

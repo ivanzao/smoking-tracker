@@ -44,10 +44,6 @@ const DAY_KEY_RE = /^\d{4}-\d{2}-\d{2}$/;
 const byTimestamp = (a: TrackerEvent, b: TrackerEvent) =>
   a.timestamp < b.timestamp ? -1 : a.timestamp > b.timestamp ? 1 : 0;
 
-export type UndoAction =
-  | { type: 'restore-event'; event: TrackerEvent }
-  | { type: 'remove-event'; eventId: string };
-
 /** A weekly XLSX report ready to download. */
 export interface XlsxReport {
   buffer: ArrayBuffer;
@@ -56,10 +52,15 @@ export interface XlsxReport {
 
 export interface UseTrackerAPI {
   events: TrackerEvent[];
-  addEvent(input: { type: EventType; location?: string; reason?: string; timestamp?: string }): void;
+  /** Returns the new event, so its toast can target exactly that one. */
+  addEvent(input: { type: EventType; location?: string; reason?: string; timestamp?: string }): TrackerEvent;
   removeEvent(id: string): void;
+  /** Re-insert a removed event as-is; used by the undo toasts. No-op if it's already back. */
+  restoreEvent(event: TrackerEvent): void;
   updateEvent(id: string, patch: Partial<Omit<TrackerEvent, 'id'>>): void;
   clearDay(dayKey: string): void;
+  /** Erase events, goals, notes and the streak marker. */
+  clearAll(): void;
   getDayTotals(dayKey: string): DayTotals;
   getEventsForDay(dayKey: string): TrackerEvent[];
   getTodayTotals(): DayTotals;
@@ -67,9 +68,6 @@ export interface UseTrackerAPI {
   /** One sheet per Mon→Sun week in the range plus an "Eventos" sheet, one row per event. */
   exportXlsx(range: XlsxRange): Promise<XlsxReport>;
   importEvents(raw: string): ImportOutcome;
-
-  pendingUndo: UndoAction | null;
-  executeUndo(): void;
 
   goals: GoalEntry[];
   setGoal(limit: number | null): void;
@@ -150,18 +148,13 @@ function loadFromStorage(): LoadedState {
       ? parsed.days.filter(isValidDayRecord)
       : [];
 
-    if ('goals' in parsed) {
-      if (!Array.isArray(parsed.goals)) return EMPTY_STATE;
-      for (const g of parsed.goals) {
-        if (!isValidGoalEntry(g)) return EMPTY_STATE;
-      }
-      const goals = (parsed.goals as GoalEntry[]).sort((a, b) =>
+    // A bad goal must not cost the user their events: this state is saved right back
+    const goals = (Array.isArray(parsed.goals) ? parsed.goals.filter(isValidGoalEntry) : [])
+      .sort((a: GoalEntry, b: GoalEntry) =>
         a.effectiveFrom < b.effectiveFrom ? -1 : a.effectiveFrom > b.effectiveFrom ? 1 : 0
       );
-      return { events: parsed.events as TrackerEvent[], goals, streakResetDay, days };
-    }
 
-    return { events: parsed.events as TrackerEvent[], goals: [], streakResetDay, days };
+    return { events: parsed.events as TrackerEvent[], goals, streakResetDay, days };
   } catch {
     return EMPTY_STATE;
   }
@@ -173,7 +166,6 @@ export function useTracker(): UseTrackerAPI {
   const [goals, setGoals] = useState<GoalEntry[]>(initial.goals);
   const [streakResetDay, setStreakResetDay] = useState<string | null>(initial.streakResetDay);
   const [days, setDays] = useState<DayRecord[]>(initial.days);
-  const [pendingUndo, setPendingUndo] = useState<UndoAction | null>(null);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ events, goals, streakResetDay, days }));
@@ -204,29 +196,17 @@ export function useTracker(): UseTrackerAPI {
       reason: input.reason?.trim() ? input.reason.trim() : undefined,
     };
     setEvents((prev) => [...prev, event].sort(byTimestamp));
-    setPendingUndo({ type: 'remove-event', eventId: id });
+    return event;
   }, []);
 
   const removeEvent = useCallback<UseTrackerAPI['removeEvent']>((id) => {
-    setEvents((prev) => {
-      const event = prev.find((e) => e.id === id);
-      if (event) {
-        setPendingUndo({ type: 'restore-event', event });
-      }
-      return prev.filter((e) => e.id !== id);
-    });
+    setEvents((prev) => prev.filter((e) => e.id !== id));
   }, []);
 
-  const executeUndo = useCallback<UseTrackerAPI['executeUndo']>(() => {
-    setPendingUndo((current) => {
-      if (!current) return null;
-      if (current.type === 'remove-event') {
-        setEvents((prev) => prev.filter((e) => e.id !== current.eventId));
-      } else {
-        setEvents((prev) => [...prev, current.event]);
-      }
-      return null;
-    });
+  const restoreEvent = useCallback<UseTrackerAPI['restoreEvent']>((event) => {
+    setEvents((prev) =>
+      prev.some((e) => e.id === event.id) ? prev : [...prev, event].sort(byTimestamp)
+    );
   }, []);
 
   const updateEvent = useCallback<UseTrackerAPI['updateEvent']>((id, patch) => {
@@ -237,6 +217,13 @@ export function useTracker(): UseTrackerAPI {
 
   const clearDay = useCallback<UseTrackerAPI['clearDay']>((dayKey) => {
     setEvents((prev) => prev.filter((e) => getDayKey(e.timestamp) !== dayKey));
+  }, []);
+
+  const clearAll = useCallback<UseTrackerAPI['clearAll']>(() => {
+    setEvents([]);
+    setGoals([]);
+    setDays([]);
+    setStreakResetDay(null);
   }, []);
 
   const getDayTotals = useCallback<UseTrackerAPI['getDayTotals']>(
@@ -399,16 +386,16 @@ export function useTracker(): UseTrackerAPI {
     events,
     addEvent,
     removeEvent,
+    restoreEvent,
     updateEvent,
     clearDay,
+    clearAll,
     getDayTotals,
     getEventsForDay,
     getTodayTotals,
     exportEvents,
     exportXlsx,
     importEvents,
-    pendingUndo,
-    executeUndo,
     goals,
     setGoal,
     getCurrentGoal,

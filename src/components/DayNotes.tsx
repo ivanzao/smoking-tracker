@@ -82,9 +82,9 @@ export const DayNotes = ({
           type="button"
           onClick={handleAdd}
           aria-label="Adicionar anotação"
-          className="px-3 bg-primary text-primary-foreground border-2 border-border shadow-brutal-sm text-xs font-bold uppercase tracking-wider active:translate-x-[1px] active:translate-y-[1px] active:shadow-none transition-transform"
+          className="min-w-11 px-3 bg-primary text-primary-foreground border-2 border-border shadow-brutal-sm text-xs font-bold uppercase tracking-wider active:translate-x-[1px] active:translate-y-[1px] active:shadow-none transition-transform"
         >
-          <span className="material-symbols-outlined text-base">add</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-base">add</span>
         </button>
       </div>
 
@@ -111,7 +111,6 @@ export const DayNotes = ({
                       if (e.key === 'Enter') commitEdit(note);
                       if (e.key === 'Escape') cancelEdit();
                     }}
-                    className="h-8"
                   />
                 ) : (
                   <button
@@ -126,7 +125,7 @@ export const DayNotes = ({
                   type="button"
                   onClick={() => onRemove(note.id)}
                   aria-label="Remover anotação"
-                  className="p-1.5 text-foreground hover:bg-destructive hover:text-destructive-foreground transition-colors shrink-0"
+                  className="h-11 w-11 -my-1 -mr-2 flex items-center justify-center text-foreground hover:bg-destructive hover:text-destructive-foreground transition-colors shrink-0"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>

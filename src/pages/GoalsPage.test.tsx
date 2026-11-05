@@ -18,8 +18,6 @@ function makeTracker(overrides: Partial<UseTrackerAPI> = {}): UseTrackerAPI {
     importEvents: vi.fn(() => ({
       ok: true, added: 0, skipped: 0, goalsAdded: 0, goalsSkipped: 0, notesAdded: 0, notesSkipped: 0,
     })),
-    pendingUndo: null,
-    executeUndo: vi.fn(),
     goals: [],
     setGoal: vi.fn(),
     getCurrentGoal: vi.fn(() => null),
@@ -40,31 +38,59 @@ function makeTracker(overrides: Partial<UseTrackerAPI> = {}): UseTrackerAPI {
 }
 
 describe('GoalsContent', () => {
-  it('calls setGoal with the slider value when save is clicked', () => {
+  it('calls setGoal with the stepper value when save is clicked', () => {
     const setGoal = vi.fn();
     const tracker = makeTracker({
       setGoal,
       getCurrentGoal: vi.fn(() => ({ id: '1', limit: 5, effectiveFrom: '2024-01-01' })),
     });
     render(<GoalsContent tracker={tracker} />);
-    const slider = screen.getByRole('slider');
-    fireEvent.change(slider, { target: { value: '10' } });
+    fireEvent.click(screen.getByRole('button', { name: /aumentar meta/i }));
+    fireEvent.click(screen.getByRole('button', { name: /aumentar meta/i }));
+    fireEvent.click(screen.getByRole('button', { name: /diminuir meta/i }));
     fireEvent.click(screen.getByRole('button', { name: /salvar meta/i }));
-    expect(setGoal).toHaveBeenCalledWith(10);
+    expect(setGoal).toHaveBeenCalledWith(6);
   });
 
-  it('shows current goal limit in the slider', () => {
+  it('shows the current goal limit', () => {
     const tracker = makeTracker({
       getCurrentGoal: vi.fn(() => ({ id: '1', limit: 7, effectiveFrom: '2024-01-01' })),
     });
     render(<GoalsContent tracker={tracker} />);
-    expect(screen.getByRole('slider')).toHaveValue('7');
+    expect(screen.getByRole('status', { name: /meta diária/i })).toHaveTextContent('07');
+  });
+
+  it('accepts a goal above 20', () => {
+    const setGoal = vi.fn();
+    const tracker = makeTracker({
+      setGoal,
+      getCurrentGoal: vi.fn(() => ({ id: '1', limit: 20, effectiveFrom: '2024-01-01' })),
+    });
+    render(<GoalsContent tracker={tracker} />);
+    fireEvent.click(screen.getByRole('button', { name: /aumentar meta/i }));
+    fireEvent.click(screen.getByRole('button', { name: /salvar meta/i }));
+    expect(setGoal).toHaveBeenCalledWith(21);
+  });
+
+  it('only clears everything after confirming in the dialog', () => {
+    const clearAll = vi.fn();
+    render(<GoalsContent tracker={makeTracker({ clearAll })} />);
+    fireEvent.click(screen.getByRole('button', { name: /limpar todos os dados/i }));
+    expect(clearAll).not.toHaveBeenCalled();
+    expect(screen.getByRole('dialog')).toHaveTextContent(/registros, metas, anotações/);
+    fireEvent.click(screen.getByRole('button', { name: /apagar tudo/i }));
+    expect(clearAll).toHaveBeenCalledOnce();
+  });
+
+  it('says data stays on the device when the app runs local-only', () => {
+    render(<GoalsContent tracker={makeTracker()} />);
+    expect(screen.getByText(/só neste aparelho/i)).toBeInTheDocument();
   });
 
   it('hides the reset streak button when there is no goal', () => {
     const tracker = makeTracker({ getCurrentStreak: vi.fn(() => 3) });
     render(<GoalsContent tracker={tracker} />);
-    expect(screen.queryByRole('button', { name: /resetar streak/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /zerar sequência/i })).toBeNull();
   });
 
   it('hides the reset streak button when the streak is already 0', () => {
@@ -73,7 +99,7 @@ describe('GoalsContent', () => {
       getCurrentStreak: vi.fn(() => 0),
     });
     render(<GoalsContent tracker={tracker} />);
-    expect(screen.queryByRole('button', { name: /resetar streak/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /zerar sequência/i })).toBeNull();
   });
 
   it('resets the streak after confirmation', () => {
@@ -85,7 +111,7 @@ describe('GoalsContent', () => {
     });
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     render(<GoalsContent tracker={tracker} />);
-    fireEvent.click(screen.getByRole('button', { name: /resetar streak/i }));
+    fireEvent.click(screen.getByRole('button', { name: /zerar sequência/i }));
     expect(resetStreak).toHaveBeenCalledTimes(1);
   });
 
@@ -98,7 +124,7 @@ describe('GoalsContent', () => {
     });
     vi.spyOn(window, 'confirm').mockReturnValue(false);
     render(<GoalsContent tracker={tracker} />);
-    fireEvent.click(screen.getByRole('button', { name: /resetar streak/i }));
+    fireEvent.click(screen.getByRole('button', { name: /zerar sequência/i }));
     expect(resetStreak).not.toHaveBeenCalled();
   });
 

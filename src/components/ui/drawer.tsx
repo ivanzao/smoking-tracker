@@ -1,6 +1,7 @@
 import * as React from "react";
 import { Drawer as DrawerPrimitive } from "vaul";
 
+import { useReturnFocus } from "@/hooks/use-return-focus";
 import { cn } from "@/lib/utils";
 
 const Drawer = ({ shouldScaleBackground = true, ...props }: React.ComponentProps<typeof DrawerPrimitive.Root>) => (
@@ -25,22 +26,36 @@ DrawerOverlay.displayName = DrawerPrimitive.Overlay.displayName;
 const DrawerContent = React.forwardRef<
   React.ElementRef<typeof DrawerPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Content>
->(({ className, children, ...props }, ref) => (
+>(({ className, children, onOpenAutoFocus, onCloseAutoFocus, ...props }, ref) => {
+  const { remember, restore } = useReturnFocus();
+  return (
   <DrawerPortal>
     <DrawerOverlay />
     <DrawerPrimitive.Content
       ref={ref}
+      // Vaul leaves focus where it was, outside the drawer. Take it onto the drawer itself:
+      // focusing a field here would raise the keyboard on every open.
+      onOpenAutoFocus={(e) => {
+        remember();
+        onOpenAutoFocus?.(e);
+        (e.currentTarget as HTMLElement | null)?.focus();
+      }}
+      onCloseAutoFocus={(e) => {
+        onCloseAutoFocus?.(e);
+        restore(e);
+      }}
       className={cn(
-        "fixed inset-x-0 bottom-0 z-50 mt-24 flex h-auto flex-col border-t-2 border-border bg-card shadow-brutal-lg",
+        "fixed inset-x-0 bottom-0 z-50 flex h-auto max-h-modal flex-col border-t-2 border-border bg-card shadow-brutal-lg focus:outline-none",
         className,
       )}
       {...props}
     >
-      <div className="mx-auto mt-4 h-2 w-[100px] bg-foreground" />
-      {children}
+      <div className="mx-auto mt-4 h-2 w-[100px] shrink-0 bg-foreground" />
+      <div className="min-h-0 flex-1 overflow-y-auto pb-safe">{children}</div>
     </DrawerPrimitive.Content>
   </DrawerPortal>
-));
+  );
+});
 DrawerContent.displayName = "DrawerContent";
 
 const DrawerHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
