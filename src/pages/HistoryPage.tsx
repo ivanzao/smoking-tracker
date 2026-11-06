@@ -49,7 +49,7 @@ export const HistoryPage = ({ tracker, onOpenEditDay }: HistoryPageProps) => {
   const todayStr = todayKey();
 
   return (
-    <main className="flex-1 px-2 pt-page pb-page md:ml-80 md:pl-4 md:pr-6 md:pt-16 md:pb-6 md:max-w-6xl">
+    <main className="flex-1 px-2 pt-page pb-page md:ml-80 md:pl-4 md:pr-6 md:pt-16 md:pb-6">
       {/* Supporting line: the month below is what this screen is for */}
       <section className="px-2 pb-3 md:px-4">
         <p className="font-semibold">
@@ -66,7 +66,7 @@ export const HistoryPage = ({ tracker, onOpenEditDay }: HistoryPageProps) => {
         </p>
       </section>
 
-      <div className="space-y-2 md:space-y-0 md:grid md:grid-cols-2 md:gap-4">
+      <div className="space-y-2 md:space-y-0 md:grid md:grid-cols-1 lg:grid-cols-2 md:gap-4">
       {/* Monthly chart */}
       <section className="panel p-4 flex flex-col">
         <div className="mb-4">

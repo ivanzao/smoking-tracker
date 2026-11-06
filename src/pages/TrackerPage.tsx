@@ -128,7 +128,7 @@ export const TrackerPage = ({
     .filter((g) => g.events.length > 0 || g.notes.length > 0);
 
   return (
-    <main className="flex-1 px-2 pt-page pb-page-dock md:ml-80 md:pl-4 md:pr-6 md:pt-16 md:pb-6 md:grid md:grid-cols-2 md:gap-4 md:items-start md:max-w-6xl">
+    <main className="flex-1 px-2 pt-page pb-page-dock md:ml-80 md:pl-4 md:pr-6 md:pt-16 md:pb-6 md:grid md:grid-cols-1 lg:grid-cols-2 md:gap-4 md:items-start">
       <div className="space-y-2">
         {/* Today */}
         <section className="panel p-4">
