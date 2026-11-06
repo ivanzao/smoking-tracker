@@ -47,6 +47,14 @@ export default {
           DEFAULT: "hsl(var(--popover))",
           foreground: "hsl(var(--popover-foreground))",
         },
+        tobacco: {
+          DEFAULT: "hsl(var(--tobacco))",
+          foreground: "hsl(var(--tobacco-foreground))",
+        },
+        cannabis: {
+          DEFAULT: "hsl(var(--cannabis))",
+          foreground: "hsl(var(--cannabis-foreground))",
+        },
         card: {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
@@ -54,13 +62,8 @@ export default {
       },
       borderRadius: {
         lg: "var(--radius)",
-        md: "calc(var(--radius))",
-        sm: "calc(var(--radius))",
-      },
-      boxShadow: {
-        brutal:    "3px 3px 0 hsl(var(--border))",
-        "brutal-sm": "2px 2px 0 hsl(var(--border))",
-        "brutal-lg": "6px 6px 0 hsl(var(--border))",
+        md: "calc(var(--radius) - 2px)",
+        sm: "calc(var(--radius) - 6px)",
       },
       keyframes: {
         "accordion-down": {

@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { format, parseISO } from 'date-fns';
-import { Trash2 } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { getDayKey } from '@/lib/events';
@@ -82,9 +82,9 @@ export const DayNotes = ({
           type="button"
           onClick={handleAdd}
           aria-label="Adicionar anotação"
-          className="min-w-11 px-3 bg-primary text-primary-foreground border-2 border-border shadow-brutal-sm text-xs font-bold uppercase tracking-wider active:translate-x-[1px] active:translate-y-[1px] active:shadow-none transition-transform"
+          className="min-w-11 px-3 flex items-center justify-center rounded-md bg-primary text-primary-foreground active:scale-95 transition-transform"
         >
-          <span aria-hidden="true" className="material-symbols-outlined text-base">add</span>
+          <Plus aria-hidden="true" className="w-5 h-5" />
         </button>
       </div>
 
@@ -97,9 +97,9 @@ export const DayNotes = ({
             return (
               <li
                 key={note.id}
-                className="flex items-center gap-2 px-3 py-2 border-2 border-border bg-card"
+                className="flex items-center gap-2 px-3 py-2 rounded-md bg-muted/50"
               >
-                <span className="text-[11px] font-bold text-muted-foreground shrink-0">{time}</span>
+                <span className="text-sm text-muted-foreground shrink-0">{time}</span>
                 {isEditing ? (
                   <Input
                     autoFocus
@@ -125,7 +125,7 @@ export const DayNotes = ({
                   type="button"
                   onClick={() => onRemove(note.id)}
                   aria-label="Remover anotação"
-                  className="h-11 w-11 -my-1 -mr-2 flex items-center justify-center text-foreground hover:bg-destructive hover:text-destructive-foreground transition-colors shrink-0"
+                  className="h-11 w-11 -my-1 -mr-2 flex items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-destructive transition-colors shrink-0"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>

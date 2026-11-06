@@ -1,10 +1,12 @@
 import { format, parseISO, subDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { ChevronRight, Cigarette, Leaf, Plus, StickyNote, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { EventType, TrackerEvent } from '@/types';
 import { UseTrackerAPI } from '@/hooks/useTracker';
 import { getDayKey, getDaysInRange, todayKey } from '@/lib/events';
 import { describeTrend, formatAverage } from '@/lib/stats';
+import { SeriesLegend } from '@/components/SeriesLegend';
 
 interface TrackerPageProps {
   tracker: UseTrackerAPI;
@@ -14,12 +16,42 @@ interface TrackerPageProps {
   onOpenGoals: () => void;
 }
 
-const TREND_ICON = (delta: number | null) =>
-  delta === null || Math.round(Math.abs(delta) * 100) === 0
-    ? 'trending_flat'
-    : delta < 0
-    ? 'trending_down'
-    : 'trending_up';
+/** Past this many uses the meter stops drawing one segment each */
+const MAX_SEGMENTS = 24;
+
+const TodayMeter = ({ tobacco, cannabis, limit }: { tobacco: number; cannabis: number; limit: number }) => {
+  const total = tobacco + cannabis;
+  const slots = Math.max(limit, total);
+  const segmented = slots <= MAX_SEGMENTS;
+
+  return (
+    <div
+      role="progressbar"
+      aria-label="Consumo de hoje em relação à meta"
+      aria-valuemin={0}
+      aria-valuemax={limit}
+      aria-valuenow={Math.min(total, limit)}
+      className="mt-4"
+    >
+      {segmented ? (
+        <div className="flex gap-0.5">
+          {Array.from({ length: slots }, (_, i) => (
+            <span
+              key={i}
+              className={`h-2.5 flex-1 rounded-[3px] transition-colors duration-500 ease-out ${
+                i >= total ? 'bg-muted' : i < tobacco ? 'bg-tobacco' : 'bg-cannabis'
+              } ${i === limit ? 'ml-2' : ''}`}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="h-2.5 rounded-[3px] bg-muted overflow-hidden">
+          <div className="h-full bg-tobacco" style={{ width: `${Math.min(100, (total / limit) * 100)}%` }} />
+        </div>
+      )}
+    </div>
+  );
+};
 
 export const TrackerPage = ({
   tracker,
@@ -32,8 +64,11 @@ export const TrackerPage = ({
   const todayTotal = totals.tobacco + totals.cannabis;
   const currentGoal = tracker.getCurrentGoal();
   const overBy = currentGoal ? todayTotal - currentGoal.limit : 0;
+  const remaining = currentGoal ? Math.max(0, currentGoal.limit - todayTotal) : 0;
   const avg7d = tracker.getRollingAverage(7);
   const delta7d = tracker.getAverageDelta(7);
+  const streak = tracker.getCurrentStreak();
+  const daysWithinGoal = tracker.getDaysWithinGoal();
 
   const today = new Date();
   const weekDays = getDaysInRange(subDays(today, 6), today);
@@ -47,7 +82,8 @@ export const TrackerPage = ({
       hasNotes: tracker.getDayNotes(d).length > 0,
     };
   });
-  const maxTotal = Math.max(1, ...weekTotals.map((w) => w.total));
+  // Scaled to the goal, not to the week's own peak, so a falling week looks like one
+  const scale = Math.max(1, currentGoal?.limit ?? 0, ...weekTotals.map((w) => w.total));
 
   const todayStr = todayKey();
   const todayNoon = parseISO(todayStr + 'T12:00:00');
@@ -92,288 +128,284 @@ export const TrackerPage = ({
     .filter((g) => g.events.length > 0 || g.notes.length > 0);
 
   return (
-    <>
-      {/* Mobile layout */}
-      <main className="flex-1 px-6 pt-page pb-page overflow-y-auto md:hidden">
-        {/* One tap logs */}
-        <section className="mb-8 space-y-4">
-          <h2 className="text-xs font-bold uppercase tracking-wider">Registrar</h2>
-          <div className="grid grid-cols-2 gap-4">
-            {(['tobacco', 'cannabis'] as EventType[]).map((type) => {
-              const isTobacco = type === 'tobacco';
-              return (
-                <button
-                  key={type}
-                  onClick={() => onQuickLog(type)}
-                  className="flex flex-col items-center justify-center gap-3 bg-card border-2 border-border shadow-brutal p-6 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-transform"
-                >
-                  <span aria-hidden="true" className="material-symbols-outlined text-4xl">
-                    {isTobacco ? 'smoking_rooms' : 'eco'}
-                  </span>
-                  <span className="text-xs font-bold tracking-wider uppercase">
-                    {isTobacco ? 'Tabaco' : 'Cannabis'}
-                  </span>
-                </button>
-              );
-            })}
+    <main className="flex-1 px-2 pt-page pb-page-dock md:ml-80 md:pl-4 md:pr-6 md:pt-16 md:pb-6 md:grid md:grid-cols-2 md:gap-4 md:items-start md:max-w-6xl">
+      <div className="space-y-2">
+        {/* Today */}
+        <section className="panel p-4">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="font-semibold">Hoje</h2>
+            {currentGoal && (
+              <p className="text-sm text-muted-foreground">
+                Meta {todayTotal} de {currentGoal.limit}
+                {overBy <= 0 && ` · ${remaining === 0 ? 'no limite' : `${remaining === 1 ? 'resta' : 'restam'} ${remaining}`}`}
+              </p>
+            )}
           </div>
-          {tracker.events.length === 0 && (
-            <p className="text-sm text-muted-foreground">
-              Um toque registra na hora. Onde e por quê são opcionais.
-            </p>
+          <dl className="mt-2 grid grid-cols-2">
+            <div className="flex flex-col-reverse">
+              <dt className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                <span aria-hidden="true" className="w-2 h-2 rounded-[3px] bg-tobacco" />
+                Tabaco
+              </dt>
+              <dd className="text-[3.25rem] leading-[3.5rem] font-semibold tracking-[-0.02em]">{totals.tobacco}</dd>
+            </div>
+            <div className="flex flex-col-reverse">
+              <dt className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                <span aria-hidden="true" className="w-2 h-2 rounded-[3px] bg-cannabis" />
+                Cannabis
+              </dt>
+              <dd className="text-[3.25rem] leading-[3.5rem] font-semibold tracking-[-0.02em]">{totals.cannabis}</dd>
+            </div>
+          </dl>
+          {currentGoal ? (
+            <>
+              <TodayMeter tobacco={totals.tobacco} cannabis={totals.cannabis} limit={currentGoal.limit} />
+              {overBy > 0 && (
+                <p className="mt-3 text-sm font-medium">
+                  {overBy} acima da meta hoje. Amanhã recomeça.
+                </p>
+              )}
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={onOpenGoals}
+              className="mt-3 min-h-11 text-sm font-semibold underline underline-offset-4 md:hidden"
+            >
+              Definir um limite diário
+            </button>
           )}
         </section>
 
-        <div className="space-y-4">
-          {/* Today */}
-          <section className="bg-card text-foreground border-2 border-border shadow-brutal p-6">
-            <h2 className="text-xs font-bold uppercase tracking-wider mb-4">Hoje</h2>
-            <div className="flex justify-between items-end">
-              <dl className="flex gap-8">
-                <div>
-                  <dt className="text-xs font-bold uppercase tracking-wider mb-1">Tabaco</dt>
-                  <dd className="text-3xl font-bold">{totals.tobacco}</dd>
-                </div>
-                <div>
-                  <dt className="text-xs font-bold uppercase tracking-wider mb-1">Cannabis</dt>
-                  <dd className="text-3xl font-bold">{totals.cannabis}</dd>
-                </div>
-              </dl>
-              {currentGoal && (
-                <div className="text-right">
-                  <p className="text-xs uppercase tracking-wider font-bold mb-1">Meta</p>
-                  <div className="flex items-baseline justify-end gap-1">
-                    <span className="text-3xl font-bold">{todayTotal}</span>
-                    <span className="text-xl font-semibold text-muted-foreground">
-                      / {currentGoal.limit}
-                    </span>
-                  </div>
-                </div>
-              )}
-            </div>
-            {currentGoal ? (
-              <>
-                <div
-                  role="progressbar"
-                  aria-label="Consumo de hoje em relação à meta"
-                  aria-valuemin={0}
-                  aria-valuemax={currentGoal.limit}
-                  aria-valuenow={Math.min(todayTotal, currentGoal.limit)}
-                  className="mt-6 h-3 w-full bg-muted border-2 border-border overflow-hidden"
-                >
-                  <div
-                    className={`h-full ${overBy > 0 ? 'bg-foreground' : 'bg-primary'}`}
-                    style={{ width: `${Math.min(100, (todayTotal / currentGoal.limit) * 100)}%` }}
-                  />
-                </div>
-                {overBy > 0 && (
-                  <p className="mt-3 text-sm font-semibold">
-                    {overBy} acima da meta hoje. Amanhã recomeça.
-                  </p>
-                )}
-              </>
-            ) : (
-              <button
-                type="button"
-                onClick={onOpenGoals}
-                className="mt-4 min-h-11 text-sm font-bold underline underline-offset-4"
-              >
-                Definir um limite diário
-              </button>
-            )}
-          </section>
+        {/* Trend */}
+        <section aria-label="Tendência" className="panel grid grid-cols-[1.4fr_1fr] divide-x divide-border">
+          <p className="p-4 text-lg font-semibold leading-snug text-balance">{describeTrend(delta7d)}</p>
+          <p className="p-4">
+            <span className="block text-2xl font-semibold leading-7">{formatAverage(avg7d)}</span>
+            <span className="text-sm text-muted-foreground">média em 7 dias</span>
+          </p>
+        </section>
 
-          {/* Trend */}
-          <section className="bg-card border-2 border-border shadow-brutal p-5">
-            <h2 className="text-xs font-bold uppercase tracking-wider mb-3">Tendência</h2>
-            <p className="flex items-start gap-2 text-lg font-bold leading-snug text-balance">
-              <span aria-hidden="true" className="material-symbols-outlined mt-0.5 shrink-0">
-                {TREND_ICON(delta7d)}
-              </span>
-              {describeTrend(delta7d)}
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Média de {formatAverage(avg7d)} por dia nos últimos 7 dias
-            </p>
-            <div className="mt-5 flex items-stretch gap-1">
+        {/* The week */}
+        <section className="panel p-4">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="section-title">Últimos 7 dias</h2>
+            <SeriesLegend goalLimit={currentGoal?.limit} />
+          </div>
+          <div className="relative mt-6">
+            {currentGoal && (
+              <div
+                aria-hidden="true"
+                className="absolute inset-x-0 h-px bg-foreground/40"
+                style={{ bottom: `calc(1.75rem + ${(currentGoal.limit / scale) * 10}rem)` }}
+              />
+            )}
+            <div className="flex items-end">
               {weekTotals.map(({ dayKey, total, tobacco, cannabis, hasNotes }) => {
-                const heightPct = total > 0 ? Math.max(5, (total / maxTotal) * 100) : 3;
                 const date = parseISO(dayKey + 'T00:00:00');
                 const count = `${total} ${total === 1 ? 'registro' : 'registros'}`;
+                const isToday = dayKey === todayStr;
                 return (
                   <button
                     key={dayKey}
                     type="button"
                     onClick={() => onOpenEditDay(dayKey)}
                     aria-label={`Abrir dia ${format(date, 'dd/MM')}: ${count}${hasNotes ? ', com anotações' : ''}`}
-                    className="min-w-0 flex-1 flex flex-col items-center gap-1"
+                    className="min-w-0 flex-1 flex flex-col items-center rounded-sm"
                   >
-                    <span className="h-24 w-full flex flex-col justify-end items-center gap-1">
-                      {hasNotes && <span className="w-1.5 h-1.5 bg-foreground" />}
-                      <span
-                        className="w-full flex flex-col border-2 border-border overflow-hidden"
-                        style={{ height: `${heightPct}%` }}
-                      >
-                        <span className="w-full bg-foreground" style={{ flexGrow: cannabis }} />
-                        <span className="w-full bg-primary" style={{ flexGrow: tobacco }} />
-                        {total === 0 && <span className="w-full flex-1 bg-muted" />}
+                    <span className="h-40 w-full flex flex-col justify-end items-center border-b border-border">
+                      <span className="relative w-6 flex flex-col gap-0.5">
+                        <span className="absolute bottom-full inset-x-[-0.5rem] mb-0.5 flex items-center justify-center gap-1 text-xs font-medium">
+                          {total > 0 && total}
+                          {hasNotes && <span className="w-1 h-1 rounded-full bg-foreground" />}
+                        </span>
+                        {cannabis > 0 && (
+                          <span
+                            className="shrink-0 rounded-[6px] bg-cannabis"
+                            style={{ height: `calc(${(cannabis / scale) * 10}rem - 2px)` }}
+                          />
+                        )}
+                        {tobacco > 0 && (
+                          <span
+                            className="shrink-0 rounded-[6px] bg-tobacco"
+                            style={{ height: `${(tobacco / scale) * 10}rem` }}
+                          />
+                        )}
                       </span>
                     </span>
-                    <span className="text-[11px] font-bold text-muted-foreground">
-                      {format(date, 'EEE', { locale: ptBR }).slice(0, 3).toUpperCase()}
+                    <span
+                      className={`h-7 pt-2 text-xs ${isToday ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}
+                    >
+                      {format(date, 'EEE', { locale: ptBR }).slice(0, 3)}
                     </span>
                   </button>
                 );
               })}
             </div>
-            <ul className="mt-3 flex gap-4 text-xs font-semibold">
-              <li className="flex items-center gap-1.5">
-                <span aria-hidden="true" className="w-3 h-3 bg-primary border-2 border-border" />
-                Tabaco
-              </li>
-              <li className="flex items-center gap-1.5">
-                <span aria-hidden="true" className="w-3 h-3 bg-foreground border-2 border-border" />
-                Cannabis
-              </li>
+          </div>
+        </section>
+
+        {/* Constancy */}
+        {currentGoal && (
+          <section aria-label="Constância" className="panel grid grid-cols-2 divide-x divide-border">
+            <p className="p-4">
+              <span className="block text-2xl font-semibold leading-7">
+                {streak} {streak === 1 ? 'dia' : 'dias'}
+              </span>
+              <span className="text-sm text-muted-foreground">em sequência</span>
+            </p>
+            <p className="p-4">
+              <span className="block text-2xl font-semibold leading-7">
+                {daysWithinGoal} {daysWithinGoal === 1 ? 'dia' : 'dias'}
+              </span>
+              <span className="text-sm text-muted-foreground">na meta</span>
+            </p>
+          </section>
+        )}
+
+        {/* Latest logs: the fast way to fix a mis-tap */}
+        {latestEvents.length > 0 && (
+          <section className="panel md:hidden">
+            <h2 className="section-title px-4 pt-4 pb-1">Últimos registros</h2>
+            <ul className="divide-y divide-border">
+              {latestEvents.map((event) => {
+                const isCannabis = event.type === 'cannabis';
+                const context = [event.location, event.reason].filter(Boolean).join(' · ');
+                const Icon = isCannabis ? Leaf : Cigarette;
+                return (
+                  <li key={event.id}>
+                    <button
+                      type="button"
+                      onClick={() => onOpenEditEvent(event)}
+                      className="w-full min-h-11 px-4 py-2.5 flex items-center gap-3 text-left rounded-lg"
+                    >
+                      <Icon
+                        aria-hidden="true"
+                        className={`w-5 h-5 shrink-0 ${isCannabis ? 'text-cannabis' : 'text-tobacco'}`}
+                      />
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-semibold">
+                          {isCannabis ? 'Cannabis' : 'Tabaco'}
+                        </span>
+                        {context && (
+                          <span className="block text-sm text-muted-foreground truncate">{context}</span>
+                        )}
+                      </span>
+                      <span className="text-sm text-muted-foreground shrink-0">
+                        {dayLabel(getDayKey(event.timestamp))} {format(parseISO(event.timestamp), 'HH:mm')}
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
           </section>
+        )}
+      </div>
 
-          {/* Latest logs: the fast way to fix a mis-tap */}
-          {latestEvents.length > 0 && (
-            <section className="bg-card border-2 border-border shadow-brutal">
-              <h2 className="text-xs font-bold uppercase tracking-wider px-5 pt-5 pb-2">
-                Últimos registros
-              </h2>
-              <ul>
-                {latestEvents.map((event) => {
-                  const isCannabis = event.type === 'cannabis';
-                  const context = [event.location, event.reason].filter(Boolean).join(' · ');
-                  return (
-                    <li key={event.id} className="border-t-2 border-border first:border-t-0">
-                      <button
-                        type="button"
-                        onClick={() => onOpenEditEvent(event)}
-                        className="w-full min-h-11 px-5 py-2.5 flex items-center gap-3 text-left hover:bg-muted"
-                      >
-                        <span aria-hidden="true" className="material-symbols-outlined shrink-0">
-                          {isCannabis ? 'eco' : 'smoking_rooms'}
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="block text-sm font-bold">
-                            {isCannabis ? 'Cannabis' : 'Tabaco'}
-                          </span>
-                          {context && (
-                            <span className="block text-xs text-muted-foreground truncate">{context}</span>
-                          )}
-                        </span>
-                        <span className="text-xs font-bold text-muted-foreground shrink-0 tabular-nums">
-                          {dayLabel(getDayKey(event.timestamp))} {format(parseISO(event.timestamp), 'HH:mm')}
-                        </span>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            </section>
-          )}
+      {/* One tap logs, within reach of the thumb */}
+      <section className="md:hidden fixed inset-x-0 bottom-dock z-40 px-2 pt-2 bg-background">
+        <h2 className="sr-only">Registrar</h2>
+        {tracker.events.length === 0 && (
+          <p className="px-2 pb-2 text-sm text-muted-foreground">
+            Um toque registra na hora. Onde e por quê são opcionais.
+          </p>
+        )}
+        <div className="grid grid-cols-2 gap-2">
+          {(['tobacco', 'cannabis'] as EventType[]).map((type) => {
+            const isTobacco = type === 'tobacco';
+            return (
+              <button
+                key={type}
+                onClick={() => onQuickLog(type)}
+                className={`h-[3.75rem] px-4 flex items-center justify-between rounded-lg font-semibold active:scale-[0.98] transition-transform ${
+                  isTobacco ? 'bg-tobacco text-tobacco-foreground' : 'bg-cannabis text-cannabis-foreground'
+                }`}
+              >
+                {isTobacco ? 'Tabaco' : 'Cannabis'}
+                <Plus aria-hidden="true" className="w-5 h-5" />
+              </button>
+            );
+          })}
         </div>
-      </main>
+      </section>
 
-      {/* Desktop layout — recent logs */}
-      <main className="hidden md:flex flex-col px-8 pt-24 pb-8 ml-80 min-h-screen">
-        <h2 className="text-xs font-bold uppercase tracking-wider mb-6">
-          Registros recentes
-        </h2>
+      {/* Desktop — recent logs */}
+      <div className="hidden md:block panel p-4">
+        <h2 className="font-semibold mb-3">Registros recentes</h2>
         {recentGroups.length === 0 ? (
           <p className="text-sm text-muted-foreground">Nenhum registro ou anotação nos últimos 3 dias.</p>
         ) : (
-          <div className="space-y-8">
+          <div className="space-y-5">
             {recentGroups.map(({ dayKey, events, heading, notes }) => (
               <section key={dayKey}>
                 <button
                   type="button"
                   onClick={() => onOpenEditDay(dayKey)}
-                  className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider mb-3 hover:underline"
+                  className="min-h-8 flex items-center gap-2 section-title rounded-sm hover:text-foreground"
                 >
                   {heading}
                   {notes.length > 0 && (
                     <>
-                      <span aria-hidden="true" className="material-symbols-outlined text-sm leading-none">
-                        sticky_note_2
-                      </span>
+                      <StickyNote aria-hidden="true" className="w-3.5 h-3.5" />
                       <span className="sr-only">com anotações</span>
                     </>
                   )}
                 </button>
                 {notes.length > 0 && (
-                  <ul className="mb-3 space-y-1">
+                  <ul className="mb-2 space-y-1">
                     {notes.map((note) => (
-                      <li key={note.id} className="text-xs text-muted-foreground italic">
+                      <li key={note.id} className="text-sm text-muted-foreground">
                         {note.text}
                       </li>
                     ))}
                   </ul>
                 )}
-                <div className="space-y-2">
+                <ul className="divide-y divide-border">
                   {events.map((event) => {
                     const isCannabis = event.type === 'cannabis';
+                    const context = [event.location, event.reason].filter(Boolean).join(' · ');
+                    const Icon = isCannabis ? Leaf : Cigarette;
                     return (
-                      <div
-                        key={event.id}
-                        role="button"
-                        tabIndex={0}
-                        onClick={() => onOpenEditEvent(event)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            onOpenEditEvent(event);
-                          }
-                        }}
-                        className="bg-card border-2 border-border p-4 flex items-center gap-4 cursor-pointer hover:bg-muted active:translate-x-[1px] active:translate-y-[1px] transition-transform"
-                      >
-                        <div className="w-9 h-9 border-2 border-border bg-primary flex items-center justify-center flex-shrink-0">
-                          <span aria-hidden="true" className="material-symbols-outlined text-base">
-                            {isCannabis ? 'eco' : 'smoking_rooms'}
-                          </span>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[11px] uppercase tracking-wider font-bold text-muted-foreground">
-                            {format(parseISO(event.timestamp), 'HH:mm', { locale: ptBR })}
-                          </p>
-                          <p className="text-sm font-bold">
-                            {isCannabis ? 'Cannabis' : 'Tabaco'}
-                          </p>
-                          {event.location && (
-                            <p className="text-[11px] text-muted-foreground">{event.location}</p>
-                          )}
-                          {event.reason && (
-                            <p className="text-[11px] text-muted-foreground">{event.reason}</p>
-                          )}
-                        </div>
+                      <li key={event.id} className="flex items-center gap-1">
                         <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleRemoveEvent(event.id);
-                          }}
-                          // keep Enter/Space from reaching the row's edit handler
-                          onKeyDown={(e) => e.stopPropagation()}
-                          aria-label="Remover evento"
-                          className="p-2 text-foreground hover:bg-destructive hover:text-destructive-foreground transition-colors"
+                          type="button"
+                          onClick={() => onOpenEditEvent(event)}
+                          className="min-w-0 flex-1 min-h-12 py-2 flex items-center gap-3 text-left rounded-sm group"
                         >
-                          <span aria-hidden="true" className="material-symbols-outlined text-base">delete</span>
+                          <Icon
+                            aria-hidden="true"
+                            className={`w-5 h-5 shrink-0 ${isCannabis ? 'text-cannabis' : 'text-tobacco'}`}
+                          />
+                          <span className="w-12 shrink-0 text-sm text-muted-foreground">
+                            {format(parseISO(event.timestamp), 'HH:mm', { locale: ptBR })}
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block text-sm font-semibold">
+                              {isCannabis ? 'Cannabis' : 'Tabaco'}
+                            </span>
+                            {context && (
+                              <span className="block text-sm text-muted-foreground truncate">{context}</span>
+                            )}
+                          </span>
+                          <ChevronRight aria-hidden="true" className="w-4 h-4 shrink-0 text-muted-foreground" />
                         </button>
-                        <span aria-hidden="true" className="material-symbols-outlined text-base text-muted-foreground flex-shrink-0">
-                          chevron_right
-                        </span>
-                      </div>
+                        <button
+                          onClick={() => handleRemoveEvent(event.id)}
+                          aria-label="Remover evento"
+                          className="w-11 h-11 flex items-center justify-center shrink-0 rounded-md text-muted-foreground hover:bg-muted hover:text-destructive transition-colors"
+                        >
+                          <Trash2 aria-hidden="true" className="w-4 h-4" />
+                        </button>
+                      </li>
                     );
                   })}
-                </div>
+                </ul>
               </section>
             ))}
           </div>
         )}
-      </main>
-    </>
+      </div>
+    </main>
   );
 };

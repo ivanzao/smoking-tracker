@@ -57,7 +57,7 @@ export const ExportXlsxDrawer = ({ open, onOpenChange, onExport }: ExportXlsxDra
   };
 
   const shortcutButton =
-    'px-3 py-2.5 text-xs font-bold uppercase tracking-wider border-2 border-border shadow-brutal-sm hover:bg-muted active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-transform';
+    'min-h-11 px-3 py-2 rounded-md bg-muted text-sm font-semibold active:scale-[0.98] transition-transform';
 
   const form = (
     <div className="px-4 pb-2 space-y-5">
@@ -99,7 +99,7 @@ export const ExportXlsxDrawer = ({ open, onOpenChange, onExport }: ExportXlsxDra
         </div>
       </div>
       {error && error !== 'empty' && (
-        <p className="text-xs font-bold uppercase tracking-wider text-destructive">
+        <p className="text-sm font-medium text-destructive">
           {RANGE_ERROR_MESSAGES[error]}
         </p>
       )}

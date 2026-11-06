@@ -138,22 +138,18 @@ export const EditDayDialog = ({
                 const context = [ev.location, ev.reason].filter(Boolean).join(' · ');
 
                 return (
-                  <li key={ev.id} className="flex items-center border-2 border-border bg-card">
+                  <li key={ev.id} className="flex items-center rounded-md bg-muted/50">
                     <button
                       type="button"
                       onClick={() => setEditingEvent(ev)}
-                      className="min-w-0 flex-1 flex items-center gap-3 p-3 text-left hover:bg-muted active:translate-x-[1px] active:translate-y-[1px] transition-transform"
+                      className="min-w-0 flex-1 flex items-center gap-3 p-3 text-left rounded-md hover:bg-muted transition-colors"
                     >
-                      <span className="w-9 h-9 border-2 border-border bg-primary flex items-center justify-center shrink-0">
-                        <Icon aria-hidden="true" className="w-4 h-4" />
-                      </span>
+                      <Icon aria-hidden="true" className={`w-5 h-5 shrink-0 ${ev.type === 'tobacco' ? 'text-tobacco' : 'text-cannabis'}`} />
                       <span className="flex-1 min-w-0">
-                        <span className="block text-sm font-bold">
-                          {time} <span className="sr-only">{ev.type === 'tobacco' ? 'tabaco' : 'cannabis'}</span>
+                        <span className="block text-sm font-semibold">
+                          {time} · {ev.type === 'tobacco' ? 'Tabaco' : 'Cannabis'}
                         </span>
-                        <span className="block text-xs text-muted-foreground truncate">
-                          {context || 'sem contexto'}
-                        </span>
+                        {context && <span className="block text-sm text-muted-foreground truncate">{context}</span>}
                       </span>
                       <ChevronRight aria-hidden="true" className="w-4 h-4 text-muted-foreground shrink-0" />
                     </button>
@@ -170,7 +166,7 @@ export const EditDayDialog = ({
                         });
                       }}
                       aria-label={`Remover evento das ${time}`}
-                      className="w-11 h-11 mr-1 flex items-center justify-center shrink-0 text-foreground hover:bg-destructive hover:text-destructive-foreground transition-colors"
+                      className="w-11 h-11 mr-1 flex items-center justify-center shrink-0 rounded-md text-muted-foreground hover:bg-muted hover:text-destructive transition-colors"
                     >
                       <Trash2 aria-hidden="true" className="w-4 h-4" />
                     </button>

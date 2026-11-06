@@ -1,3 +1,4 @@
+import { ChevronLeft, ChevronRight, StickyNote } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -29,10 +30,10 @@ export const DayCell = ({
   const isFuture = goalStatus === 'future';
 
   const bgClass =
-    goalStatus === 'within' ? 'bg-primary text-primary-foreground'
-    : goalStatus === 'over' ? 'bg-card bg-hatch text-foreground'
-    : isFuture ? 'bg-transparent text-muted-foreground border-dashed border-muted-foreground'
-    : 'bg-card text-foreground';
+    goalStatus === 'within' ? 'bg-muted text-foreground'
+    : goalStatus === 'over' ? 'bg-hatch border border-border text-foreground'
+    : isFuture ? 'text-muted-foreground/60'
+    : 'border border-border text-foreground';
 
   const description = [
     format(date, "d 'de' MMMM", { locale: ptBR }),
@@ -49,22 +50,17 @@ export const DayCell = ({
       aria-label={description}
       aria-current={isToday ? 'date' : undefined}
       className={cn(
-        'relative min-h-12 flex flex-col items-center justify-center p-1 border-2 border-border active:translate-x-[1px] active:translate-y-[1px] transition-transform disabled:active:translate-x-0 disabled:active:translate-y-0',
+        'relative min-h-12 flex flex-col items-center justify-center p-1 rounded-sm',
         bgClass,
-        isToday && 'shadow-brutal',
+        isToday && 'ring-2 ring-foreground',
       )}
     >
       {hasNotes && (
-        <span
-          aria-hidden="true"
-          className="material-symbols-outlined absolute top-0.5 right-0.5 text-[0.7rem] leading-none"
-        >
-          sticky_note_2
-        </span>
+        <StickyNote aria-hidden="true" className="absolute top-1 right-1 w-2.5 h-2.5" />
       )}
-      <span className="text-sm font-bold leading-tight">{format(date, 'd')}</span>
+      <span className="text-xs leading-tight text-muted-foreground">{format(date, 'd')}</span>
       {!isFuture && (
-        <span className="text-xs font-semibold leading-tight tabular-nums">{total > 0 ? total : '–'}</span>
+        <span className="text-base font-semibold leading-tight">{total > 0 ? total : '–'}</span>
       )}
     </button>
   );
@@ -98,18 +94,18 @@ export const MonthNavigation = ({
       onClick={onBack}
       disabled={!canGoBack}
       aria-label="Mês anterior"
-      className="w-11 h-11 flex items-center justify-center bg-card border-2 border-border shadow-brutal-sm active:translate-x-[1px] active:translate-y-[1px] active:shadow-none transition-transform disabled:opacity-30"
+      className="w-11 h-11 flex items-center justify-center rounded-md hover:bg-muted transition-colors disabled:opacity-30"
     >
-      <span aria-hidden="true" className="material-symbols-outlined text-sm">chevron_left</span>
+      <ChevronLeft aria-hidden="true" className="w-5 h-5" />
     </button>
-    <span className="text-sm font-bold uppercase tracking-wider capitalize">{label}</span>
+    <span className="font-semibold capitalize">{label}</span>
     <button
       onClick={onForward}
       disabled={!canGoForward}
       aria-label="Próximo mês"
-      className="w-11 h-11 flex items-center justify-center bg-card border-2 border-border shadow-brutal-sm active:translate-x-[1px] active:translate-y-[1px] active:shadow-none transition-transform disabled:opacity-30"
+      className="w-11 h-11 flex items-center justify-center rounded-md hover:bg-muted transition-colors disabled:opacity-30"
     >
-      <span aria-hidden="true" className="material-symbols-outlined text-sm">chevron_right</span>
+      <ChevronRight aria-hidden="true" className="w-5 h-5" />
     </button>
   </div>
 );

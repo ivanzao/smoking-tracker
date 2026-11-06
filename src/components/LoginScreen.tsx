@@ -8,10 +8,10 @@ interface LoginScreenProps {
 }
 
 const FIELD =
-  'w-full bg-background border-2 border-border p-3 text-base font-bold focus:outline-none focus:ring-2 focus:ring-ring';
+  'w-full rounded-md bg-input border border-border p-3 text-base font-medium focus-visible:border-foreground/60';
 const PRIMARY_BUTTON =
-  'w-full py-3 bg-primary text-primary-foreground border-2 border-border shadow-brutal-sm font-bold uppercase tracking-wide text-sm active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-transform disabled:opacity-50';
-const LINK_BUTTON = 'w-full py-2 text-xs font-bold uppercase tracking-wider hover:underline';
+  'w-full min-h-12 rounded-md bg-primary text-primary-foreground font-semibold text-sm active:scale-[0.98] transition-transform disabled:opacity-50';
+const LINK_BUTTON = 'w-full min-h-11 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground';
 
 export const LoginScreen = ({ sync, onCancel }: LoginScreenProps) => {
   const [email, setEmail] = useState(sync.email ?? '');
@@ -42,13 +42,13 @@ export const LoginScreen = ({ sync, onCancel }: LoginScreenProps) => {
 
   return (
     <main className="fixed inset-0 z-[60] overflow-y-auto bg-background flex items-center justify-center p-6">
-      <div className="w-full max-w-sm bg-card border-2 border-border shadow-brutal p-6 space-y-4">
-        <h1 className="text-2xl font-bold tracking-tight">Smoking Tracker</h1>
+      <div className="panel w-full max-w-sm p-6 space-y-4">
+        <h1 className="text-2xl font-semibold">Smoking Tracker</h1>
 
         {step === 'email' ? (
           <form onSubmit={handleSendCode} className="space-y-4">
             <div className="space-y-2">
-              <label htmlFor="login-email" className="text-xs font-bold uppercase tracking-wider">
+              <label htmlFor="login-email" className="section-title">
                 E-mail
               </label>
               <input
@@ -69,7 +69,7 @@ export const LoginScreen = ({ sync, onCancel }: LoginScreenProps) => {
           <form onSubmit={handleVerify} className="space-y-4">
             <p className="text-sm">Enviamos um código para {email}.</p>
             <div className="space-y-2">
-              <label htmlFor="login-code" className="text-xs font-bold uppercase tracking-wider">
+              <label htmlFor="login-code" className="section-title">
                 Código
               </label>
               <input
@@ -100,7 +100,7 @@ export const LoginScreen = ({ sync, onCancel }: LoginScreenProps) => {
         )}
 
         {error && (
-          <p role="alert" className="text-sm font-bold text-destructive">
+          <p role="alert" className="text-sm font-medium text-destructive">
             {error}
           </p>
         )}

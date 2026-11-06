@@ -4,38 +4,46 @@
 
 @layer base {
   :root {
+    color-scheme: dark;
+
     /* Surfaces */
-    --background:               42 56% 92%;   /* #F5EFDF Parchment */
-    --foreground:                0  0%  7%;   /* #111111 */
+    --background:              233 22% 14%;   /* #1B1D2A */
+    --foreground:              240 20% 96%;   /* #F2F2F7 */
 
-    --card:                      0  0% 100%;  /* #FFFFFF */
-    --card-foreground:           0  0%  7%;
+    --card:                    230 19% 18%;   /* #262938 */
+    --card-foreground:         240 20% 96%;
 
-    --popover:                   0  0% 100%;
-    --popover-foreground:        0  0%  7%;
+    --popover:                 230 19% 18%;
+    --popover-foreground:      240 20% 96%;
 
-    --muted:                    42 30% 88%;   /* #ECE5D2 */
-    --muted-foreground:          0  0% 40%;   /* #666666 */
+    --muted:                   227 17% 25%;   /* #343849 */
+    --muted-foreground:        230 17% 73%;   /* #AEB2C6 */
 
-    --accent:                   47 100% 62%;  /* #FFD23F amarelo */
-    --accent-foreground:         0  0%  7%;
+    --accent:                  227 17% 25%;
+    --accent-foreground:       240 20% 96%;
 
-    /* Brand */
-    --primary:                  47 100% 62%;
-    --primary-foreground:        0  0%  7%;
+    /* Neutral on purpose: color belongs to the data series, not to actions */
+    --primary:                 240 20% 96%;
+    --primary-foreground:      233 22% 14%;
 
-    --secondary:                 0  0% 100%;
-    --secondary-foreground:      0  0%  7%;
+    --secondary:               227 17% 25%;
+    --secondary-foreground:    240 20% 96%;
 
-    --destructive:               0 72% 42%;   /* #B81E1E */
-    --destructive-foreground:    0  0% 100%;
+    --destructive:               0 90% 77%;   /* #F99 soft red, readable on the dark blocks */
+    --destructive-foreground:  233 22% 14%;
+
+    /* Data series */
+    --tobacco:                  21 100% 77%;  /* #FFB38A */
+    --tobacco-foreground:       22 50% 10%;
+    --cannabis:                165 59% 75%;   /* #9BE3D0 */
+    --cannabis-foreground:     166 50% 10%;
 
     /* Borders / inputs / focus */
-    --border:                    0  0%  7%;
-    --input:                     0  0% 100%;
-    --ring:                      0  0%  7%;
+    --border:                  227 17% 25%;
+    --input:                   233 22% 14%;
+    --ring:                    240 20% 96%;
 
-    --radius: 0rem;
+    --radius: 1rem;
   }
 }
 
@@ -72,10 +80,16 @@
     @apply bg-primary text-primary-foreground;
   }
 
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+
   body {
     @apply bg-background text-foreground;
-    font-family: 'Space Grotesk', system-ui, sans-serif;
-    font-weight: 500;
+    font-family: 'Figtree', system-ui, sans-serif;
+    font-weight: 400;
+    font-variant-numeric: tabular-nums;
     -webkit-font-smoothing: antialiased;
   }
 
@@ -87,6 +101,16 @@
 
   input[type=number] {
     -moz-appearance: textfield;
+  }
+}
+
+@layer components {
+  .panel {
+    @apply bg-card text-card-foreground rounded-lg;
+  }
+
+  .section-title {
+    @apply text-sm font-medium text-muted-foreground;
   }
 }
 
@@ -102,16 +126,25 @@
   }
 
   .h-bottom-nav {
-    height: calc(5rem + env(safe-area-inset-bottom));
+    height: calc(4.5rem + env(safe-area-inset-bottom));
     padding-bottom: env(safe-area-inset-bottom);
   }
 
   .pt-page {
-    padding-top: calc(6rem + env(safe-area-inset-top));
+    padding-top: calc(4.5rem + env(safe-area-inset-top));
   }
 
   .pb-page {
-    padding-bottom: calc(8rem + env(safe-area-inset-bottom));
+    padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
+  }
+
+  /* The Hoje page also clears the log buttons docked above the nav */
+  .pb-page-dock {
+    padding-bottom: calc(10.5rem + env(safe-area-inset-bottom));
+  }
+
+  .bottom-dock {
+    bottom: calc(4.5rem + env(safe-area-inset-bottom));
   }
 
   .pb-safe {
@@ -154,25 +187,4 @@
   @keyframes reduced-fade-out {
     to { opacity: 0; }
   }
-}
-
-/* Material Symbols */
-.material-symbols-outlined {
-  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-  font-family: 'Material Symbols Outlined';
-  font-style: normal;
-  font-weight: normal;
-  line-height: 1;
-  letter-spacing: normal;
-  text-transform: none;
-  display: inline-block;
-  /* Before the font loads the icon is its ligature text; don't let it push the layout */
-  width: 1em;
-  height: 1em;
-  overflow: hidden;
-  white-space: nowrap;
-  word-wrap: normal;
-  direction: ltr;
-  -webkit-font-smoothing: antialiased;
-  user-select: none;
 }

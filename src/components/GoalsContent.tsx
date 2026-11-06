@@ -1,4 +1,5 @@
 import { useRef, useState, useEffect } from 'react';
+import { Download, Minus, Plus, Sheet, Trash2, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import { UseTrackerAPI, ImportOutcome } from '@/hooks/useTracker';
 import { ImportError } from '@/lib/export';
@@ -27,8 +28,8 @@ interface GoalsContentProps {
 
 const MAX_GOAL = 99;
 
-const BRUTAL_BUTTON =
-  'min-w-0 min-h-11 flex items-center justify-center text-center py-2.5 px-1 border-2 border-border shadow-brutal-sm text-[11px] font-bold uppercase tracking-wide leading-tight active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-transform';
+const GOAL_BUTTON =
+  'min-w-0 min-h-11 flex items-center justify-center text-center py-2 px-2 rounded-md text-sm font-semibold leading-tight active:scale-[0.98] transition-transform';
 
 const IMPORT_ERROR_MESSAGES: Record<ImportError, string> = {
   'invalid-json': 'Arquivo não é um JSON válido',
@@ -123,25 +124,20 @@ export const GoalsContent = ({ tracker, sync, compact = false }: GoalsContentPro
     }
   };
 
-  const sectionTitle = `text-xs font-bold uppercase tracking-wider ${compact ? 'mb-2' : 'mb-4'}`;
-  const dataRow = `w-full ${compact ? 'px-3 py-2' : 'p-4'} flex items-center gap-3 hover:bg-muted text-left transition-colors`;
+  const sectionTitle = `section-title ${compact ? 'mb-2' : 'mb-2 px-2'}`;
+  const dataRow = `w-full ${compact ? 'px-3 py-2' : 'p-4'} flex items-center gap-3 hover:bg-muted/60 text-left transition-colors focus-visible:[outline-offset:-2px]`;
 
   return (
-    <div className={compact ? 'space-y-4' : 'space-y-8'}>
+    <div className={compact ? 'space-y-4' : 'space-y-5'}>
       {/* Goal section */}
       <section>
-        <h2 className={sectionTitle}>
-          Meta Diária
-        </h2>
-        <div className={`bg-card border-2 border-border shadow-brutal ${compact ? 'p-4' : 'p-5'}`}>
+        <h2 className="sr-only">Meta Diária</h2>
+        <div className="panel p-4">
           <div className={`flex justify-between items-start ${compact ? 'mb-3' : 'mb-4'}`}>
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-primary border-2 border-border flex items-center justify-center">
-                <span aria-hidden="true" className="material-symbols-outlined">track_changes</span>
-              </div>
               <div>
-                <h3 className="font-bold">Limite por dia</h3>
-                <p className="text-xs text-muted-foreground">Tabaco + Cannabis combinados</p>
+                <h3 className="font-semibold">Limite por dia</h3>
+                <p className="text-sm text-muted-foreground">Tabaco + Cannabis combinados</p>
               </div>
             </div>
           </div>
@@ -151,11 +147,11 @@ export const GoalsContent = ({ tracker, sync, compact = false }: GoalsContentPro
               onClick={() => setGoalValue((v) => Math.max(1, v - 1))}
               disabled={goalValue <= 1}
               aria-label="Diminuir meta"
-              className="w-11 h-11 flex items-center justify-center bg-card border-2 border-border shadow-brutal-sm active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-transform disabled:opacity-30"
+              className="w-11 h-11 flex items-center justify-center rounded-md bg-muted active:scale-95 transition-transform disabled:opacity-30"
             >
-              <span aria-hidden="true" className="material-symbols-outlined">remove</span>
+              <Minus aria-hidden="true" className="w-5 h-5" />
             </button>
-            <output aria-label="Meta diária" className="font-bold text-3xl tracking-tight tabular-nums">
+            <output aria-label="Meta diária" className="font-bold text-3xl">
               {String(goalValue).padStart(2, '0')}
             </output>
             <button
@@ -163,16 +159,16 @@ export const GoalsContent = ({ tracker, sync, compact = false }: GoalsContentPro
               onClick={() => setGoalValue((v) => Math.min(MAX_GOAL, v + 1))}
               disabled={goalValue >= MAX_GOAL}
               aria-label="Aumentar meta"
-              className="w-11 h-11 flex items-center justify-center bg-card border-2 border-border shadow-brutal-sm active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-transform disabled:opacity-30"
+              className="w-11 h-11 flex items-center justify-center rounded-md bg-muted active:scale-95 transition-transform disabled:opacity-30"
             >
-              <span aria-hidden="true" className="material-symbols-outlined">add</span>
+              <Plus aria-hidden="true" className="w-5 h-5" />
             </button>
           </div>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 gap-2">
             <button
               onClick={handleSaveGoal}
               aria-label="Salvar meta"
-              className={BRUTAL_BUTTON + ' bg-primary text-primary-foreground'}
+              className={GOAL_BUTTON + ' col-span-2 bg-primary text-primary-foreground'}
             >
               Salvar Meta
             </button>
@@ -180,7 +176,7 @@ export const GoalsContent = ({ tracker, sync, compact = false }: GoalsContentPro
               <button
                 onClick={handleRemoveGoal}
                 aria-label="Remover meta"
-                className={BRUTAL_BUTTON + ' bg-card text-destructive'}
+                className={GOAL_BUTTON + ' bg-muted text-destructive'}
               >
                 Remover
               </button>
@@ -189,7 +185,7 @@ export const GoalsContent = ({ tracker, sync, compact = false }: GoalsContentPro
               <button
                 onClick={handleResetStreak}
                 aria-label="Zerar sequência"
-                className={BRUTAL_BUTTON + ' bg-card text-foreground'}
+                className={GOAL_BUTTON + ' bg-muted text-foreground'}
               >
                 Zerar sequência
               </button>
@@ -208,27 +204,27 @@ export const GoalsContent = ({ tracker, sync, compact = false }: GoalsContentPro
             Seus dados ficam só neste aparelho. Exporte um backup para não perdê-los.
           </p>
         )}
-        <div className="bg-card border-2 border-border shadow-brutal">
+        <div className="panel overflow-hidden divide-y divide-border">
           <button
             onClick={handleExport}
             aria-label="Exportar JSON"
-            className={dataRow + ' border-b-2 border-border'}
+            className={dataRow}
           >
-            <span aria-hidden="true" className="material-symbols-outlined">download</span>
+            <Download aria-hidden="true" className="w-5 h-5 shrink-0 text-muted-foreground" />
             <div>
-              <p className="text-sm font-bold">Exportar JSON</p>
-              <p className="text-xs text-muted-foreground">Baixa backup de todos os eventos</p>
+              <p className="text-sm font-semibold">Exportar JSON</p>
+              <p className="text-sm text-muted-foreground">Baixa backup de todos os eventos</p>
             </div>
           </button>
           <button
             onClick={() => setXlsxPickerOpen(true)}
             aria-label="Exportar planilha"
-            className={dataRow + ' border-b-2 border-border'}
+            className={dataRow}
           >
-            <span aria-hidden="true" className="material-symbols-outlined">table_view</span>
+            <Sheet aria-hidden="true" className="w-5 h-5 shrink-0 text-muted-foreground" />
             <div>
-              <p className="text-sm font-bold">Exportar planilha</p>
-              <p className="text-xs text-muted-foreground">Relatório semanal (XLSX) para compartilhar</p>
+              <p className="text-sm font-semibold">Exportar planilha</p>
+              <p className="text-sm text-muted-foreground">Relatório semanal (XLSX) para compartilhar</p>
             </div>
           </button>
           <button
@@ -236,10 +232,10 @@ export const GoalsContent = ({ tracker, sync, compact = false }: GoalsContentPro
             aria-label="Importar JSON"
             className={dataRow}
           >
-            <span aria-hidden="true" className="material-symbols-outlined">upload</span>
+            <Upload aria-hidden="true" className="w-5 h-5 shrink-0 text-muted-foreground" />
             <div>
-              <p className="text-sm font-bold">Importar JSON</p>
-              <p className="text-xs text-muted-foreground">Restaura a partir de um backup</p>
+              <p className="text-sm font-semibold">Importar JSON</p>
+              <p className="text-sm text-muted-foreground">Restaura a partir de um backup</p>
             </div>
           </button>
           <input
@@ -264,9 +260,9 @@ export const GoalsContent = ({ tracker, sync, compact = false }: GoalsContentPro
       <section className="text-center">
         <button
           onClick={() => setClearOpen(true)}
-          className="min-h-11 text-destructive font-bold uppercase tracking-wider text-xs flex items-center justify-center gap-2 mx-auto hover:underline px-4 transition-colors"
+          className="min-h-11 text-destructive font-medium text-sm flex items-center justify-center gap-2 mx-auto rounded-md hover:underline px-4"
         >
-          <span aria-hidden="true" className="material-symbols-outlined text-sm">delete_forever</span>
+          <Trash2 aria-hidden="true" className="w-4 h-4" />
           Limpar todos os dados
         </button>
       </section>

@@ -14,8 +14,8 @@ describe('BottomNav', () => {
     render(<BottomNav tab="history" onChange={() => {}} />);
     const historyBtn = screen.getByRole('button', { name: /histórico/i });
     const trackerBtn = screen.getByRole('button', { name: /hoje/i });
-    expect(historyBtn.className).toContain('bg-primary');
-    expect(trackerBtn.className).not.toContain('bg-primary');
+    expect(historyBtn.className).toContain('bg-card');
+    expect(trackerBtn.className).not.toContain('bg-card');
   });
 
   it('calls onChange with the correct tab when a button is clicked', () => {

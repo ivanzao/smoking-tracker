@@ -89,7 +89,7 @@ export const NewEventDrawer = ({ open, onOpenChange, type, onSubmit }: NewEventD
         onTimeChange={setTime}
       />
       {timestamp !== null && !canSubmit && (
-        <p role="alert" className="text-xs font-bold text-destructive">
+        <p role="alert" className="text-sm font-medium text-destructive">
           A data e a hora não podem estar no futuro.
         </p>
       )}

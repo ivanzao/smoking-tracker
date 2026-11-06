@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { format, parseISO } from 'date-fns';
+import { SlidersHorizontal } from 'lucide-react';
 import { toast } from 'sonner';
 import { Toaster as Sonner } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -73,11 +74,11 @@ const App = () => {
       <Sonner />
 
       {sync.status === 'expired' && (
-        <div className="fixed top-header inset-x-0 z-[45] bg-primary text-primary-foreground border-b-2 border-border px-4 py-1.5 flex items-center justify-between gap-3">
-          <span className="text-xs font-bold">Sem login: salvando só neste aparelho</span>
+        <div className="fixed top-header inset-x-0 z-[45] bg-muted text-foreground px-4 py-1.5 flex items-center justify-between gap-3">
+          <span className="text-sm font-medium">Sem login: salvando só neste aparelho</span>
           <button
             onClick={() => setLoginOpen(true)}
-            className="text-xs font-bold uppercase tracking-wide underline shrink-0"
+            className="min-h-8 text-sm font-semibold underline underline-offset-4 shrink-0"
           >
             Entrar de novo
           </button>
@@ -88,14 +89,14 @@ const App = () => {
       )}
 
       {/* Mobile header */}
-      <header className="md:hidden fixed top-0 w-full z-50 bg-card flex justify-between items-center px-6 h-header border-b-2 border-border">
-        <h1 className="text-foreground font-bold tracking-tight text-xl">Smoking Tracker</h1>
+      <header className="md:hidden fixed top-0 w-full z-50 bg-background flex justify-between items-center px-4 h-header">
+        <h1 className="text-foreground font-semibold text-xl">Smoking Tracker</h1>
         <button
           onClick={() => setTab('goals')}
           aria-label="Configurações"
-          className="w-11 h-11 -mr-2 flex items-center justify-center text-foreground hover:bg-muted transition-colors"
+          className="w-11 h-11 -mr-2 flex items-center justify-center rounded-md text-muted-foreground"
         >
-          <span aria-hidden="true" className="material-symbols-outlined">settings</span>
+          <SlidersHorizontal aria-hidden="true" className="w-5 h-5" />
         </button>
       </header>
 

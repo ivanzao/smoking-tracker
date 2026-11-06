@@ -25,14 +25,14 @@ export const AccountSection = ({ sync, titleClassName }: AccountSectionProps) =>
   return (
     <section>
       <h2 className={titleClassName}>Conta</h2>
-      <div className="bg-card border-2 border-border shadow-brutal p-4 space-y-3">
+      <div className="panel p-4 space-y-3">
         <div className="min-w-0">
-          <p className="text-sm font-bold truncate">{sync.email}</p>
-          <p className="text-[10px] text-muted-foreground">{syncSummary(sync)}</p>
+          <p className="text-sm font-semibold truncate">{sync.email}</p>
+          <p className="text-sm text-muted-foreground">{syncSummary(sync)}</p>
         </div>
         <button
           onClick={handleSignOut}
-          className="w-full py-2.5 border-2 border-border shadow-brutal-sm text-[11px] font-bold uppercase tracking-wide active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-transform"
+          className="w-full min-h-11 rounded-md bg-muted text-sm font-semibold active:scale-[0.98] transition-transform"
         >
           Sair da conta
         </button>

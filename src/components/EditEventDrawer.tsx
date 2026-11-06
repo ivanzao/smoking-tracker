@@ -116,7 +116,7 @@ export const EditEventDrawer = ({ open, onOpenChange, event, onSave }: EditEvent
         onTimeChange={setTime}
       />
       {timestamp !== null && !canSave && (
-        <p role="alert" className="text-xs font-bold text-destructive">
+        <p role="alert" className="text-sm font-medium text-destructive">
           A data e a hora não podem estar no futuro.
         </p>
       )}

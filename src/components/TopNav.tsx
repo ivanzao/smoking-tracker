@@ -1,3 +1,4 @@
+import { Cigarette, Leaf } from 'lucide-react';
 import { EventType } from '@/types';
 import { UseTrackerAPI } from '@/hooks/useTracker';
 import { UseSyncAPI } from '@/hooks/useSync';
@@ -18,101 +19,53 @@ const NAV_TABS: { id: Tab; label: string }[] = [
   { id: 'history', label: 'Histórico' },
 ];
 
-export const TopNav = ({ tab, onChange, tracker, sync, onOpenNewEvent }: TopNavProps) => {
-  const streak = tracker.getCurrentStreak();
-  const currentGoal = tracker.getCurrentGoal();
-  const totals = tracker.getTodayTotals();
-  const todayTotal = totals.tobacco + totals.cannabis;
+export const TopNav = ({ tab, onChange, tracker, sync, onOpenNewEvent }: TopNavProps) => (
+  <>
+    {/* Fixed header — desktop only */}
+    <header className="hidden md:flex fixed top-0 w-full z-50 bg-background h-16 items-center gap-8 px-6">
+      <h1 className="w-[17.5rem] text-foreground font-semibold text-xl">Smoking Tracker</h1>
+      <nav className="flex gap-1 items-center">
+        {NAV_TABS.map(({ id, label }) => (
+          <button
+            key={id}
+            onClick={() => onChange(id)}
+            aria-current={tab === id ? 'page' : undefined}
+            className={`h-10 px-4 rounded-md text-sm ${
+              tab === id
+                ? 'bg-card text-foreground font-semibold'
+                : 'text-muted-foreground font-medium hover:bg-card/60'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </nav>
+    </header>
 
-  return (
-    <>
-      {/* Fixed header — desktop only */}
-      <header className="hidden md:flex fixed top-0 w-full z-50 bg-background h-16 items-center justify-between px-6 border-b-2 border-border">
-        <h1 className="text-foreground font-bold tracking-tight text-xl">Smoking Tracker</h1>
-        <nav className="flex gap-3 items-center">
-          {NAV_TABS.map(({ id, label }) => (
-            <button
-              key={id}
-              onClick={() => onChange(id)}
-              aria-current={tab === id ? 'page' : undefined}
-              className={`font-bold uppercase tracking-wide text-sm px-3 py-1 border-2 ${
-                tab === id
-                  ? 'bg-primary text-primary-foreground border-border shadow-brutal-sm'
-                  : 'border-transparent text-foreground hover:bg-muted'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </nav>
-        <div className="w-10" />
-      </header>
-
-      {/* Fixed sidebar — desktop only */}
-      <aside className="hidden md:flex flex-col fixed top-16 left-0 w-80 h-[calc(100vh-64px)] bg-card border-r-2 border-border p-5 space-y-4 overflow-y-auto scrollbar-none z-40">
-        {/* Log */}
-        <div className="space-y-2">
-          <h3 className="text-xs font-bold text-foreground uppercase tracking-wider">
-            Registrar
-          </h3>
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              onClick={() => onOpenNewEvent('tobacco')}
-              className="flex flex-col items-center justify-center gap-1 p-3 bg-card border-2 border-border shadow-brutal-sm active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-transform"
-            >
-              <span aria-hidden="true" className="material-symbols-outlined">smoking_rooms</span>
-              <span className="text-[10px] font-bold uppercase tracking-wider">
-                Tabaco
-              </span>
-            </button>
-            <button
-              onClick={() => onOpenNewEvent('cannabis')}
-              className="flex flex-col items-center justify-center gap-1 p-3 bg-card border-2 border-border shadow-brutal-sm active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-transform"
-            >
-              <span aria-hidden="true" className="material-symbols-outlined">eco</span>
-              <span className="text-[10px] font-bold uppercase tracking-wider">
-                Cannabis
-              </span>
-            </button>
-          </div>
+    {/* Fixed sidebar — desktop only */}
+    <aside className="hidden md:flex flex-col fixed top-16 left-0 w-80 h-[calc(100vh-64px)] pl-6 pr-2 pb-6 space-y-4 overflow-y-auto scrollbar-none z-40">
+      {/* Log */}
+      <div className="space-y-2">
+        <h2 className="section-title">Registrar</h2>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            onClick={() => onOpenNewEvent('tobacco')}
+            className="h-14 flex items-center justify-center gap-2 rounded-lg bg-tobacco text-tobacco-foreground font-semibold hover:bg-tobacco/90 active:scale-[0.98] transition-[background-color,transform]"
+          >
+            <Cigarette aria-hidden="true" className="w-5 h-5" />
+            Tabaco
+          </button>
+          <button
+            onClick={() => onOpenNewEvent('cannabis')}
+            className="h-14 flex items-center justify-center gap-2 rounded-lg bg-cannabis text-cannabis-foreground font-semibold hover:bg-cannabis/90 active:scale-[0.98] transition-[background-color,transform]"
+          >
+            <Leaf aria-hidden="true" className="w-5 h-5" />
+            Cannabis
+          </button>
         </div>
+      </div>
 
-        {/* Sequência + Consumo */}
-        <div className="bg-card border-2 border-border shadow-brutal p-4 flex gap-4">
-          <div className="flex-1 min-w-0">
-            <p className="text-[10px] font-bold uppercase tracking-wider mb-2">
-              Sequência
-            </p>
-            <div className="flex items-baseline gap-1">
-              <span className="text-3xl font-bold tracking-tight">
-                {currentGoal ? streak : '—'}
-              </span>
-              <span className="text-muted-foreground font-semibold text-xs uppercase tracking-wider">
-                dias
-              </span>
-            </div>
-          </div>
-          <div className="w-[2px] bg-border self-stretch" />
-          <div className="flex-1 min-w-0">
-            <p className="text-[10px] uppercase tracking-wider font-bold mb-2">
-              Hoje
-            </p>
-            <div className="flex items-baseline gap-1">
-              <span className="text-3xl font-bold">{todayTotal}</span>
-              {currentGoal && (
-                <span className="text-muted-foreground text-sm font-semibold">
-                  / {currentGoal.limit}
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Goals section */}
-        <div className="border-t-2 border-border pt-4">
-          <GoalsContent tracker={tracker} sync={sync} compact />
-        </div>
-      </aside>
-    </>
-  );
-};
+      <GoalsContent tracker={tracker} sync={sync} compact />
+    </aside>
+  </>
+);
